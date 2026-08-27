@@ -3,7 +3,7 @@ class AssetSerializer < ApplicationSerializer
     {
       id: record.public_id,
       asset_type: record.asset_type,
-      url: record.storage_url,
+      url: record.signed_url,
       content_type: record.content_type,
       width: record.width,
       height: record.height,

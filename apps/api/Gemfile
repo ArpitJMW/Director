@@ -44,6 +44,11 @@ gem "pundit", "~> 2.4"
 # LLM provider (spec §15 — behind Providers::LLM adapter interface)
 gem "anthropic", "~> 1.0"
 
+# Object storage for generated media (spec §12) — S3 / Cloudflare R2
+gem "aws-sdk-s3", "~> 1.170"
+# Pure-Ruby image dimension/type detection (no ImageMagick/vips needed)
+gem "fastimage", "~> 2.3"
+
 # Authentication: Devise + JWT for a token-based API (see docs/architecture.md D3)
 gem "devise", "~> 4.9"
 gem "devise-jwt", "~> 0.12"

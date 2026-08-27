@@ -28,6 +28,9 @@ Rails.application.routes.draw do
       # Readiness probe: verifies DB + Redis connectivity.
       get "health", to: "health#show"
 
+      # Signed file delivery for the disk storage backend.
+      get "files", to: "files#show"
+
       # --- Application resources (spec §29) --------------------------------
       resources :projects, only: [ :index, :show, :create, :update, :destroy ] do
         member do
@@ -40,6 +43,7 @@ Rails.application.routes.draw do
         resources :scenes, only: [ :index ]
         resources :renders, only: [ :index ], controller: :video_renders
         resources :jobs, only: [ :index ], controller: :generation_jobs
+        resources :assets, only: [ :create ]
       end
 
       resources :scenes, only: [ :show, :update ] do

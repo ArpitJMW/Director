@@ -75,6 +75,12 @@ tracks stage/attempts/status independently of the project, so one failed stage
 never re-runs the whole project (spec §28). `sidekiq_retries_exhausted` marks the
 project failed and records `failed_from_status` for resume.
 
+### D13 — Storage via a service interface; assets table is source of truth
+Not Active Storage — a `Storage::Service` adapter (disk for dev/test, S3/R2 for
+prod). The `assets` row owns `storage_key` + provenance; no polymorphic blob
+indirection. Disk delivery is a signed app endpoint (HMAC capability URL, no
+session), S3 delivery is a presigned URL — the serializer's `url` is whichever.
+
 ### D10 — Frontend: JWT in an httpOnly cookie, proxied through Next
 The browser never holds the token. Next route handlers (`/api/auth/*`) exchange
 credentials for a cookie; `/api/v1/[...path]` transparently proxies data calls to
@@ -107,7 +113,9 @@ does the UX-level auth redirect.
 - [x] Script generation: `Ai::ScriptService` (spec §22) + `Generation::ScriptJob` (Sidekiq, retryable) + `POST /projects/:id/script/generate` (202, idempotent) + `GET /projects/:id/jobs`
 - [x] Storyboard + visual director: `Ai::ScenePlannerService` (§20 steps 7-9, §23) + `Generation::StoryboardJob` + `POST /projects/:id/storyboard/generate` — full-replace scenes following the §19 contract
 - [x] Frontend: generate-script / generate-storyboard buttons, job polling (§30), script + scene display
-- [ ] Research engine (§21), media stages (image/voice/caption/music)
+- [x] Object storage: `Storage::Service` (disk + S3/R2 adapters), `Asset.store!` (transactional, provenance, FastImage dimensions), signed URLs, `POST /projects/:id/assets` upload, `GET /files` disk delivery. See [`storage.md`](storage.md)
+- [ ] Image generation (Gemini/Nano-Banana §15), then voice (§26) + captions
+- [ ] Research engine (§21)
 
 See [`ai-pipeline.md`](ai-pipeline.md).
 

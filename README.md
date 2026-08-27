@@ -54,6 +54,7 @@ Whole JS workspace: `pnpm turbo run typecheck lint test`. Rails tests: `cd apps/
 | [`docs/api.md`](docs/api.md) | REST API reference |
 | [`docs/frontend.md`](docs/frontend.md) | Next.js app — auth, data layer, routes |
 | [`docs/ai-pipeline.md`](docs/ai-pipeline.md) | Provider abstraction, script generation, job lifecycle |
+| [`docs/storage.md`](docs/storage.md) | Object storage adapters, `Asset.store!`, signed URLs |
 | `docs/video-engine.md` | Remotion compositions & templates _(tbd)_ |
 | `docs/policy.md` | Quality & YouTube preflight engine _(tbd)_ |
 | `docs/runbook.md` | Ops / on-call _(tbd)_ |
