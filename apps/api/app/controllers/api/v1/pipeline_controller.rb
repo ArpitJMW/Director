@@ -68,7 +68,18 @@ module Api
         render json: { job: GenerationJobSerializer.call(gen_job.reload) }, status: :accepted
       end
 
-      def render_video     = not_implemented(project_scope, "rendering")
+      # POST /api/v1/projects/:id/render
+      def render_video
+        start_stage(
+          stage: "render",
+          job: Generation::RenderJob,
+          allowed: -> { _1.scenes.exists? && (_1.rendering? || _1.may_start_render?) },
+          advance: :start_render!,
+          may_advance: :may_start_render?,
+          precondition_message: "Generate a storyboard first."
+        )
+      end
+
       def regenerate_scene = not_implemented(scene_scope, "scene regeneration")
 
       private

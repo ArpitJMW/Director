@@ -3,6 +3,11 @@ packages:
   - "apps/renderer"
   - "packages/*"
 
+onlyBuiltDependencies:
+  - esbuild
+  - "@remotion/compositor-linux-x64-gnu"
+  - "@remotion/compositor-linux-x64-musl"
+
 # Postinstall scripts allowed to run (pnpm 11 supply-chain gate).
 # esbuild (vitest) and unrs-resolver (eslint) fetch platform binaries.
 allowBuilds:

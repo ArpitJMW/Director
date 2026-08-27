@@ -77,7 +77,7 @@ class Project < ApplicationRecord
     end
 
     event :start_render do
-      transitions from: :generating_captions, to: :rendering
+      transitions from: [ :draft, :generating_assets, :generating_voice, :generating_captions, :rendering ], to: :rendering
     end
 
     event :start_quality_check do

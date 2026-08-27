@@ -13,7 +13,9 @@ import {
   useGenerateVoice,
   useProjectJobs,
   useRegenerateSceneAsset,
+  useRenderVideo,
 } from "@/lib/api/pipeline";
+import { useProjectRenders } from "@/lib/api/renders";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { PipelineProgress } from "@/components/pipeline-progress";
 
@@ -27,7 +29,13 @@ export default function ProjectPage() {
   const generateStoryboard = useGenerateStoryboard(id);
   const generateAssets = useGenerateAssets(id);
   const generateVoice = useGenerateVoice(id);
+  const renderVideo = useRenderVideo(id);
   const regenerateSceneAsset = useRegenerateSceneAsset(id);
+  const { data: renders } = useProjectRenders(id);
+  const latestRender = renders?.[0];
+  const renderRunning =
+    Boolean(latestRender && ["queued", "rendering", "uploading"].includes(latestRender.status)) ||
+    (jobs?.some((j) => j.stage === "render" && j.active) ?? false);
 
   const scriptJob = jobs?.find((j) => j.stage === "script");
   const storyboardJob = jobs?.find((j) => j.stage === "storyboard");
@@ -128,6 +136,47 @@ export default function ProjectPage() {
               </span>
               <p className="mt-1 whitespace-pre-wrap">{script.full_narration}</p>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {Boolean(scenes?.length) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Render</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                size="sm"
+                disabled={renderRunning || renderVideo.isPending}
+                onClick={() => renderVideo.mutate()}
+              >
+                {renderRunning
+                  ? "Rendering…"
+                  : latestRender?.status === "completed"
+                    ? "Re-render"
+                    : "Render video"}
+              </Button>
+              {latestRender && (
+                <span className="text-xs text-muted">
+                  v{latestRender.version} · {latestRender.status}
+                  {latestRender.status === "rendering" && ` · ${latestRender.progress}%`}
+                </span>
+              )}
+              {latestRender?.status === "failed" && (
+                <span className="text-xs text-danger">
+                  {latestRender.failure_reason ?? "render failed"}
+                </span>
+              )}
+            </div>
+            {latestRender?.status === "completed" && latestRender.output_url && (
+              <video
+                controls
+                src={latestRender.output_url}
+                className="w-full max-w-xl rounded border border-border"
+              />
+            )}
           </CardContent>
         </Card>
       )}

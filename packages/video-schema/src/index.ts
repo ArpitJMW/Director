@@ -63,6 +63,23 @@ export const RenderAssetSchema = z.object({
   duration: z.number().optional(),
 });
 
+export const CaptionCueSchema = z.object({
+  text: z.string(),
+  start: z.number(),
+  end: z.number(),
+});
+export type CaptionCue = z.infer<typeof CaptionCueSchema>;
+
+export const RenderSceneSchema = SceneSchema.extend({
+  /** Per-scene narration audio, resolved to an absolute URL. */
+  narration_audio_url: z.string().url().nullable().default(null),
+  /** Character/word alignment for caption timing (spec §26). */
+  alignment: z.record(z.unknown()).nullable().default(null),
+  /** Timed caption cues (seconds, relative to the scene start). */
+  captions: z.array(CaptionCueSchema).default([]),
+});
+export type RenderScene = z.infer<typeof RenderSceneSchema>;
+
 export const RenderManifestSchema = z.object({
   render_id: z.string(),
   project_id: z.string(),
@@ -70,14 +87,7 @@ export const RenderManifestSchema = z.object({
   height: z.number().int(),
   fps: z.number().int().default(30),
   template: z.record(z.unknown()),
-  scenes: z.array(
-    SceneSchema.extend({
-      /** Per-scene narration audio, resolved. */
-      narration_audio_url: z.string().url().nullable().default(null),
-      /** ElevenLabs-style character/word alignment for caption timing (spec §26). */
-      alignment: z.record(z.unknown()).nullable().default(null),
-    }),
-  ),
+  scenes: z.array(RenderSceneSchema),
   assets: z.array(RenderAssetSchema),
   music: z
     .object({

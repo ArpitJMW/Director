@@ -49,6 +49,10 @@ export function useGenerateVoice(projectId: string) {
   return useStageMutation(projectId, "voice/generate");
 }
 
+export function useRenderVideo(projectId: string) {
+  return useStageMutation(projectId, "render");
+}
+
 export function useRegenerateSceneAsset(projectId: string) {
   const qc = useQueryClient();
   return useMutation({

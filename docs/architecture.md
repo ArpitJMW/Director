@@ -69,6 +69,13 @@ with no API key (default in dev/test). `AiGeneration.track!` wraps each call to
 record status/tokens/cost/latency. Model default `claude-opus-5`, overridable via
 `LLM_MODEL` for cost tuning once real cost data exists.
 
+### D14 — Renderer is a separate Node app, invoked by shell-out
+`apps/renderer` (Remotion) is its own workspace package. `Video::RenderVideo`
+writes the manifest to a tempfile and runs `node apps/renderer/render.mjs`
+(`RENDER_COMMAND` overrides). The renderer only speaks the manifest JSON — no
+shared Ruby/TS runtime coupling — so it can move to its own service/box later.
+`render.mjs` imports no `.ts` (plain Node); the Remotion bundle handles TS.
+
 ### D12 — Pipeline stages are Sidekiq jobs backed by GenerationJob rows
 `Generation::BaseJob` + one subclass per stage. The `GenerationJob` row (own AASM)
 tracks stage/attempts/status independently of the project, so one failed stage
@@ -116,7 +123,8 @@ does the UX-level auth redirect.
 - [x] Object storage: `Storage::Service` (disk + S3/R2 adapters), `Asset.store!` (transactional, provenance, FastImage dimensions), signed URLs, `POST /projects/:id/assets` upload, `GET /files` disk delivery. See [`storage.md`](storage.md)
 - [x] Image generation: `Providers::Image` (Gemini + Fake ChunkyPNG adapters), `Media::ImageGenerationService`, `Generation::AssetsJob` (per-scene failure isolation) + `SceneAssetJob`, `POST /projects/:id/assets/generate` + `POST /scenes/:id/assets/regenerate`. Frontend: image thumbnails + regenerate.
 - [x] Voice + captions: `Providers::Voice` (ElevenLabs + Fake WAV adapters), `Media::VoiceGenerationService` + `Media::CaptionService` (timed cues from alignment §26), `Generation::VoiceJob`, `POST /projects/:id/voice/generate`. Frontend: per-scene `<audio>` + caption count.
-- [ ] Music, then the Remotion renderer (`apps/renderer`) → MP4
+- [x] Remotion renderer: `apps/renderer` (`ClipifyVideo` composition, scene clips + captions + Ken Burns), `Media::RenderManifestBuilder` (§20 step 14), `Video::RenderVideo` (shell-out), `Generation::RenderJob`, `POST /projects/:id/render`. Frontend: render button + `<video>` player. See [`video-engine.md`](video-engine.md). _Real render needs headless-Chrome system libs — see `apps/renderer/README.md`._
+- [ ] Music, thumbnails, `@remotion/transitions`
 - [ ] Research engine (§21)
 
 See [`ai-pipeline.md`](ai-pipeline.md).

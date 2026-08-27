@@ -129,12 +129,26 @@ RSpec.describe "Api::V1::Pipeline", type: :request do
     end
   end
 
-  describe "still-stubbed actions" do
-    it "returns 501 for rendering" do
+  describe "POST /api/v1/projects/:id/render" do
+    it "409s without a storyboard" do
       post "/api/v1/projects/#{project.public_id}/render", headers: headers
-      expect(response).to have_http_status(:not_implemented)
+      expect(response).to have_http_status(:conflict)
     end
 
+    it "enqueues a render job once a storyboard exists" do
+      Ai::ScriptService.new(project: project).call
+      Ai::ScenePlannerService.new(project: project).call
+
+      expect {
+        post "/api/v1/projects/#{project.public_id}/render", headers: headers
+      }.to change(Generation::RenderJob.jobs, :size).by(1)
+
+      expect(response).to have_http_status(:accepted)
+      expect(project.reload.status).to eq("rendering")
+    end
+  end
+
+  describe "still-stubbed actions" do
     it "guards scene regeneration by ownership" do
       scene = create(:scene, project: create(:project))
       post "/api/v1/scenes/#{scene.public_id}/regenerate", headers: headers
