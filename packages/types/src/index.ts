@@ -161,6 +161,42 @@ export interface PreflightReport {
   disclaimer: string;
 }
 
+export type GenerationStage =
+  | "validate"
+  | "research"
+  | "collect_sources"
+  | "story_angle"
+  | "script"
+  | "fact_check"
+  | "storyboard"
+  | "visual_direction"
+  | "prompts"
+  | "assets"
+  | "narration"
+  | "captions"
+  | "music"
+  | "manifest"
+  | "render"
+  | "quality_check"
+  | "preflight"
+  | "finalize";
+
+export interface GenerationJob {
+  id: string;
+  stage: GenerationStage;
+  status: "pending" | "queued" | "running" | "succeeded" | "failed" | "cancelled" | "retrying";
+  progress: number;
+  attempts: number;
+  max_attempts: number;
+  active: boolean;
+  result: Record<string, unknown>;
+  failure_reason: string | null;
+  scene_id: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
 // --- Request payloads -------------------------------------------------------
 
 export interface CreateProjectInput {

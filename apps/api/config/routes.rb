@@ -39,6 +39,7 @@ Rails.application.routes.draw do
         end
         resources :scenes, only: [ :index ]
         resources :renders, only: [ :index ], controller: :video_renders
+        resources :jobs, only: [ :index ], controller: :generation_jobs
       end
 
       resources :scenes, only: [ :show, :update ] do

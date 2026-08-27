@@ -53,13 +53,14 @@ Whole JS workspace: `pnpm turbo run typecheck lint test`. Rails tests: `cd apps/
 | [`docs/data-model.md`](docs/data-model.md) | Core schema, state machines, Scene contract |
 | [`docs/api.md`](docs/api.md) | REST API reference |
 | [`docs/frontend.md`](docs/frontend.md) | Next.js app — auth, data layer, routes |
-| `docs/ai-pipeline.md` | Research → script → storyboard → assets flow _(tbd)_ |
+| [`docs/ai-pipeline.md`](docs/ai-pipeline.md) | Provider abstraction, script generation, job lifecycle |
 | `docs/video-engine.md` | Remotion compositions & templates _(tbd)_ |
 | `docs/policy.md` | Quality & YouTube preflight engine _(tbd)_ |
 | `docs/runbook.md` | Ops / on-call _(tbd)_ |
 
 ## Build status
 
-**Phase 2 (Foundation) — complete.** Rails API (JWT auth, 15-table core model,
-REST API per spec §29), Next.js shell, shared packages. Next: Phase 3 — AI
-pipeline. See [`docs/architecture.md`](docs/architecture.md).
+**Phase 2 (Foundation) — complete.** **Phase 3 (AI pipeline) — in progress:**
+provider abstraction + script generation are live (`POST
+/projects/:id/script/generate`). Storyboard / media stages next. See
+[`docs/architecture.md`](docs/architecture.md).

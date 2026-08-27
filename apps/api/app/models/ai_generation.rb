@@ -25,6 +25,51 @@ class AiGeneration < ApplicationRecord
 
   scope :succeeded, -> { where(status: "succeeded") }
 
+  # Wraps a provider call, recording status, timing, tokens, cost and a log line
+  # (spec §37). Yields the running record; the block returns a
+  # Providers::LLM::Result. Re-raises on failure after marking the row failed.
+  def self.track!(project:, kind:, provider:, model:, provider_kind: "llm", scene: nil, request: {})
+    generation = create!(
+      project: project, scene: scene, kind: kind, provider_kind: provider_kind,
+      provider: provider, model: model, status: "running", request: request,
+      started_at: Time.current
+    )
+
+    result = yield generation
+
+    cost = Providers::Pricing.cost_usd(
+      provider: result.provider, model: result.model,
+      input_tokens: result.input_tokens, output_tokens: result.output_tokens
+    )
+    generation.update!(
+      status: "succeeded",
+      finished_at: Time.current,
+      latency_ms: ((Time.current - generation.started_at) * 1000).round,
+      prompt_tokens: result.input_tokens,
+      completion_tokens: result.output_tokens,
+      total_tokens: result.total_tokens,
+      cost_usd: cost,
+      provider_request_id: result.provider_request_id,
+      response: { stop_reason: result.stop_reason, text_length: result.text.length }
+    )
+    GenerationLog.create!(
+      project: project, ai_generation: generation, scene: scene, level: "info",
+      stage: kind, message: "#{kind} via #{result.provider}/#{result.model}",
+      data: { cost_usd: cost, tokens: result.total_tokens }
+    )
+    result
+  rescue => e
+    generation&.update(
+      status: "failed", finished_at: Time.current,
+      failure_reason: e.message, error: { class: e.class.name }
+    )
+    GenerationLog.create!(
+      project: project, ai_generation: generation, scene: scene, level: "error",
+      stage: kind, message: "#{kind} failed: #{e.message}"
+    )
+    raise
+  end
+
   def duration_ms
     return latency_ms if latency_ms
     return unless started_at && finished_at

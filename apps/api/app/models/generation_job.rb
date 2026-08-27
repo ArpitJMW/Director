@@ -23,6 +23,10 @@ class GenerationJob < ApplicationRecord
 
   before_validation :assign_idempotency_key, on: :create
 
+  ACTIVE_STATUSES = %w[pending queued running retrying].freeze
+  scope :active, -> { where(status: ACTIVE_STATUSES) }
+  scope :recent, -> { order(created_at: :desc) }
+
   aasm column: :status, no_direct_assignment: true do
     state :pending, initial: true
     state :queued
@@ -38,7 +42,7 @@ class GenerationJob < ApplicationRecord
     end
 
     event :start do
-      transitions from: [ :queued, :pending, :retrying ], to: :running
+      transitions from: [ :queued, :pending, :retrying, :running ], to: :running
       after { increment_attempt! }
     end
 

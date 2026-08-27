@@ -32,12 +32,17 @@ gem "rack-cors"
 # Background jobs + queue store (spec §12 standardizes on Sidekiq + Redis)
 gem "sidekiq", "~> 7.3"
 gem "redis", "~> 5.3"
+# Sidekiq 7.3's scheduler is incompatible with connection_pool 3.x.
+gem "connection_pool", "~> 2.5"
 
 # Project lifecycle state machine (spec §18)
 gem "aasm", "~> 5.5"
 
 # Authorization — every project/scene/asset access is scoped by owner (spec §36)
 gem "pundit", "~> 2.4"
+
+# LLM provider (spec §15 — behind Providers::LLM adapter interface)
+gem "anthropic", "~> 1.0"
 
 # Authentication: Devise + JWT for a token-based API (see docs/architecture.md D3)
 gem "devise", "~> 4.9"

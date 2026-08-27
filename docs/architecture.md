@@ -62,6 +62,19 @@ Policies scope every read to `record.project.user_id == user.id`.
 serialization gem. Explicit, greppable, easy to shape per-endpoint with options
 (`include_scenes:`, `include_script:`).
 
+### D11 — Provider abstraction with an offline fake
+Every external-model call goes through an adapter interface (`Providers::LLM::Base`).
+`FakeAdapter` returns deterministic well-formed output so the whole pipeline runs
+with no API key (default in dev/test). `AiGeneration.track!` wraps each call to
+record status/tokens/cost/latency. Model default `claude-opus-5`, overridable via
+`LLM_MODEL` for cost tuning once real cost data exists.
+
+### D12 — Pipeline stages are Sidekiq jobs backed by GenerationJob rows
+`Generation::BaseJob` + one subclass per stage. The `GenerationJob` row (own AASM)
+tracks stage/attempts/status independently of the project, so one failed stage
+never re-runs the whole project (spec §28). `sidekiq_retries_exhausted` marks the
+project failed and records `failed_from_status` for resume.
+
 ### D10 — Frontend: JWT in an httpOnly cookie, proxied through Next
 The browser never holds the token. Next route handlers (`/api/auth/*`) exchange
 credentials for a cookie; `/api/v1/[...path]` transparently proxies data calls to
@@ -87,7 +100,15 @@ does the UX-level auth redirect.
 - [x] Next.js shell (`apps/web`, :3001): Tailwind v4 + `@clipify/ui` primitives, TanStack Query, JWT-in-httpOnly-cookie via Next route handlers + `/api/v1` proxy. Landing / login / signup / dashboard / new project / project detail. Smoke-tested end-to-end (signup → cookie → proxy → create project → SSR dashboard → signout). See [`frontend.md`](frontend.md)
 - [x] Shared packages: `@clipify/types` (API types), `@clipify/ui` (primitives + tokens)
 
-**Phase 2 (Foundation) complete.** Next: Phase 3 — AI pipeline.
+**Phase 2 (Foundation) complete.**
+
+**Phase 3 (AI pipeline) — in progress:**
+- [x] Provider abstraction (`Providers::LLM::Base` + Anthropic + Fake adapters), `Providers::Pricing`, `AiGeneration.track!` ledger wrapper
+- [x] Script generation: `Ai::ScriptService` (spec §22) + `Generation::ScriptJob` (Sidekiq, retryable) + `POST /projects/:id/script/generate` (202, idempotent) + `GET /projects/:id/jobs`
+- [x] Frontend: generate-script button, job polling (§30), script display
+- [ ] Research engine (§21), storyboard / scene planner (§20), visual director (§23)
+
+See [`ai-pipeline.md`](ai-pipeline.md).
 
 ### Endpoints so far
 
