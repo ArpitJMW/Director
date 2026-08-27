@@ -40,3 +40,18 @@ export function useGenerateScript(projectId: string) {
 export function useGenerateStoryboard(projectId: string) {
   return useStageMutation(projectId, "storyboard/generate");
 }
+
+export function useGenerateAssets(projectId: string) {
+  return useStageMutation(projectId, "assets/generate");
+}
+
+export function useRegenerateSceneAsset(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sceneId: string) =>
+      apiFetch<{ job: GenerationJob }>(`/scenes/${sceneId}/assets/regenerate`, {
+        method: "POST",
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: jobKeys.list(projectId) }),
+  });
+}

@@ -38,6 +38,7 @@ Rails.application.routes.draw do
           # Pipeline actions — implemented in Phase 3+.
           post "script/generate",     to: "pipeline#generate_script"
           post "storyboard/generate", to: "pipeline#generate_storyboard"
+          post "assets/generate",     to: "pipeline#generate_assets"
           post :render,               to: "pipeline#render_video"
         end
         resources :scenes, only: [ :index ]

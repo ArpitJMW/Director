@@ -16,9 +16,10 @@ class Scene < ApplicationRecord
   belongs_to :script, optional: true
   belongs_to :selected_asset, class_name: "Asset", optional: true
 
-  has_many :assets, dependent: :nullify
+  has_many :assets, dependent: :destroy
   has_many :voice_generations, dependent: :nullify
   has_many :ai_generations, dependent: :nullify
+  has_many :generation_logs, dependent: :nullify
 
   validates :key, presence: true, uniqueness: { scope: :project_id }
   validates :position, presence: true,

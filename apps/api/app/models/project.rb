@@ -65,7 +65,7 @@ class Project < ApplicationRecord
     end
 
     event :start_assets do
-      transitions from: :storyboarding, to: :generating_assets
+      transitions from: [ :draft, :script_generating, :storyboarding, :generating_assets ], to: :generating_assets
     end
 
     event :start_voice do

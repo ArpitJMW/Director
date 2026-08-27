@@ -26,9 +26,38 @@ module Api
         )
       end
 
-      def render_video           = not_implemented(project_scope, "rendering")
-      def regenerate_scene       = not_implemented(scene_scope, "scene regeneration")
-      def regenerate_scene_asset = not_implemented(scene_scope, "scene asset regeneration")
+      # POST /api/v1/projects/:id/assets/generate
+      def generate_assets
+        start_stage(
+          stage: "assets",
+          job: Generation::AssetsJob,
+          allowed: -> { _1.scenes.exists? && (_1.generating_assets? || _1.may_start_assets?) },
+          advance: :start_assets!,
+          may_advance: :may_start_assets?,
+          precondition_message: "Generate a storyboard first."
+        )
+      end
+
+      # POST /api/v1/scenes/:id/assets/regenerate
+      def regenerate_scene_asset
+        scene = scene_scope
+        project = scene.project
+        authorize project, :generate?
+
+        existing = project.generation_jobs.active.find_by(stage: "assets", scene_id: scene.id)
+        if existing
+          return render json: { job: GenerationJobSerializer.call(existing) }, status: :accepted
+        end
+
+        gen_job = project.generation_jobs.create!(stage: "assets", queue: "media", scene: scene)
+        gen_job.enqueue!
+        Generation::SceneAssetJob.perform_async(gen_job.id)
+
+        render json: { job: GenerationJobSerializer.call(gen_job.reload) }, status: :accepted
+      end
+
+      def render_video     = not_implemented(project_scope, "rendering")
+      def regenerate_scene = not_implemented(scene_scope, "scene regeneration")
 
       private
 
@@ -38,12 +67,12 @@ module Api
 
         return render_invalid_state(project, precondition_message) unless allowed.call(project)
 
-        existing = project.generation_jobs.active.find_by(stage: stage)
+        existing = project.generation_jobs.active.where(scene_id: nil).find_by(stage: stage)
         if existing
           return render json: { job: GenerationJobSerializer.call(existing) }, status: :accepted
         end
 
-        gen_job = project.generation_jobs.create!(stage: stage, queue: stage)
+        gen_job = project.generation_jobs.create!(stage: stage, queue: job.sidekiq_options["queue"] || "default")
         project.public_send(advance) if project.public_send(may_advance)
         gen_job.enqueue!
         job.perform_async(gen_job.id)

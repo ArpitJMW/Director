@@ -17,6 +17,7 @@ class Asset < ApplicationRecord
   validates :cost_usd, numericality: { greater_than_or_equal_to: 0 }
 
   before_validation :sync_ai_generated_flag
+  after_destroy_commit :purge_storage_object
 
   scope :requiring_disclosure, -> { where(requires_disclosure: true) }
   scope :project_level, -> { where(scene_id: nil) }
@@ -75,5 +76,13 @@ class Asset < ApplicationRecord
 
   def sync_ai_generated_flag
     self.ai_generated = true if source_type == "ai_generated"
+  end
+
+  def purge_storage_object
+    return if storage_key.blank?
+
+    Storage.service.delete(key: storage_key)
+  rescue => e
+    Rails.logger.warn("failed to purge storage object #{storage_key}: #{e.message}")
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_27_160015) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_27_170001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -404,10 +404,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_160015) do
   add_foreign_key "generation_jobs", "generation_jobs", column: "parent_job_id"
   add_foreign_key "generation_jobs", "projects"
   add_foreign_key "generation_jobs", "scenes"
-  add_foreign_key "generation_logs", "ai_generations"
-  add_foreign_key "generation_logs", "generation_jobs"
+  add_foreign_key "generation_logs", "ai_generations", on_delete: :nullify
+  add_foreign_key "generation_logs", "generation_jobs", on_delete: :nullify
   add_foreign_key "generation_logs", "projects"
-  add_foreign_key "generation_logs", "scenes"
+  add_foreign_key "generation_logs", "scenes", on_delete: :nullify
   add_foreign_key "music_tracks", "assets"
   add_foreign_key "music_tracks", "projects"
   add_foreign_key "preflight_reports", "ai_generations", column: "generated_by_generation_id"

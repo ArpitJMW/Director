@@ -7,9 +7,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "@clipify/ui";
 import { useProject, useProjectScenes, projectKeys } from "@/lib/api/projects";
 import {
+  useGenerateAssets,
   useGenerateScript,
   useGenerateStoryboard,
   useProjectJobs,
+  useRegenerateSceneAsset,
 } from "@/lib/api/pipeline";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { PipelineProgress } from "@/components/pipeline-progress";
@@ -22,12 +24,16 @@ export default function ProjectPage() {
   const { data: jobs } = useProjectJobs(id);
   const generateScript = useGenerateScript(id);
   const generateStoryboard = useGenerateStoryboard(id);
+  const generateAssets = useGenerateAssets(id);
+  const regenerateSceneAsset = useRegenerateSceneAsset(id);
 
   const scriptJob = jobs?.find((j) => j.stage === "script");
   const storyboardJob = jobs?.find((j) => j.stage === "storyboard");
+  const assetsJob = jobs?.find((j) => j.stage === "assets" && !j.scene_id);
   const scriptRunning = Boolean(scriptJob?.active);
   const storyboardRunning = Boolean(storyboardJob?.active);
-  const anyRunning = scriptRunning || storyboardRunning;
+  const assetsRunning = jobs?.some((j) => j.stage === "assets" && j.active) ?? false;
+  const anyRunning = scriptRunning || storyboardRunning || assetsRunning;
 
   // When a job finishes, refresh the project + scenes.
   const wasRunning = useRef(false);
@@ -127,7 +133,7 @@ export default function ProjectPage() {
           <CardTitle>Storyboard</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex items-center gap-3">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
             <Button
               size="sm"
               disabled={!script || storyboardRunning || generateStoryboard.isPending}
@@ -139,6 +145,14 @@ export default function ProjectPage() {
                   ? "Regenerate storyboard"
                   : "Generate storyboard"}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!scenes?.length || assetsRunning || generateAssets.isPending}
+              onClick={() => generateAssets.mutate()}
+            >
+              {assetsRunning ? "Generating images…" : "Generate images"}
+            </Button>
             {!script && (
               <span className="text-xs text-muted">Generate a script first.</span>
             )}
@@ -147,22 +161,51 @@ export default function ProjectPage() {
                 Failed: {storyboardJob.failure_reason ?? "unknown error"}
               </span>
             )}
+            {assetsJob?.status === "failed" && (
+              <span className="text-xs text-danger">
+                Image generation failed: {assetsJob.failure_reason ?? "unknown error"}
+              </span>
+            )}
           </div>
           {!scenes?.length && !storyboardRunning && (
             <p className="text-sm text-muted">No scenes yet.</p>
           )}
           <ol className="flex flex-col gap-3">
             {scenes?.map((s) => (
-              <li key={s.id} className="rounded-md border border-border p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    {s.scene.id} · {s.scene.visual_type.replace(/_/g, " ")}
-                  </span>
-                  <span className="text-xs text-muted">{s.scene.duration}s</span>
-                </div>
-                {s.scene.narration && (
-                  <p className="mt-1 text-sm text-muted">{s.scene.narration}</p>
+              <li key={s.id} className="flex gap-3 rounded-md border border-border p-3">
+                {s.selected_asset?.url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={s.selected_asset.url}
+                    alt={s.scene.caption ?? s.scene.id}
+                    className="h-20 w-32 shrink-0 rounded object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-32 shrink-0 items-center justify-center rounded bg-surface-2 text-xs text-muted">
+                    {s.status === "generating_asset" ? "…" : "no image"}
+                  </div>
                 )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {s.scene.id} · {s.scene.visual_type.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-xs text-muted">{s.scene.duration}s</span>
+                  </div>
+                  {s.scene.narration && (
+                    <p className="mt-1 line-clamp-2 text-sm text-muted">{s.scene.narration}</p>
+                  )}
+                  {s.selected_asset && (
+                    <button
+                      type="button"
+                      className="mt-1 text-xs text-accent disabled:opacity-50"
+                      disabled={assetsRunning}
+                      onClick={() => regenerateSceneAsset.mutate(s.id)}
+                    >
+                      Regenerate image
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ol>

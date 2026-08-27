@@ -7,13 +7,23 @@ module Providers
     @llm ||= build_llm
   end
 
-  # Test hook.
+  # The configured image provider (spec §15).
+  def image
+    @image ||= build_image
+  end
+
+  # Test hooks.
   def llm=(adapter)
     @llm = adapter
   end
 
+  def image=(adapter)
+    @image = adapter
+  end
+
   def reset!
     @llm = nil
+    @image = nil
   end
 
   def build_llm
@@ -24,6 +34,17 @@ module Providers
     when "anthropic" then LLM::AnthropicAdapter.new
     when "fake" then LLM::FakeAdapter.new
     else raise ArgumentError, "unknown LLM_PROVIDER: #{provider.inspect}"
+    end
+  end
+
+  def build_image
+    provider = ENV["IMAGE_PROVIDER"].presence
+    provider ||= ENV["GEMINI_API_KEY"].present? ? "gemini" : "fake"
+
+    case provider
+    when "gemini" then Image::GeminiAdapter.new
+    when "fake" then Image::FakeImageAdapter.new
+    else raise ArgumentError, "unknown IMAGE_PROVIDER: #{provider.inspect}"
     end
   end
 end

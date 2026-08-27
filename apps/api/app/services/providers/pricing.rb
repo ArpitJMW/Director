@@ -10,6 +10,11 @@ module Providers
       }
     }.freeze
 
+    # Flat USD cost per generated image.
+    IMAGE_TABLE = {
+      "gemini" => { "gemini-2.5-flash-image" => 0.039 }
+    }.freeze
+
     module_function
 
     def cost_usd(provider:, model:, input_tokens:, output_tokens:)
@@ -17,6 +22,11 @@ module Providers
       return 0.0 unless rates
 
       ((input_tokens * rates[:input]) + (output_tokens * rates[:output])) / 1_000_000.0
+    end
+
+    def image_cost_usd(provider:, model:, images: 1)
+      rate = IMAGE_TABLE.dig(provider.to_s, model.to_s) || 0.0
+      rate * images
     end
   end
 end

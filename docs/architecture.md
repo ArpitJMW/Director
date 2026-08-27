@@ -114,7 +114,8 @@ does the UX-level auth redirect.
 - [x] Storyboard + visual director: `Ai::ScenePlannerService` (§20 steps 7-9, §23) + `Generation::StoryboardJob` + `POST /projects/:id/storyboard/generate` — full-replace scenes following the §19 contract
 - [x] Frontend: generate-script / generate-storyboard buttons, job polling (§30), script + scene display
 - [x] Object storage: `Storage::Service` (disk + S3/R2 adapters), `Asset.store!` (transactional, provenance, FastImage dimensions), signed URLs, `POST /projects/:id/assets` upload, `GET /files` disk delivery. See [`storage.md`](storage.md)
-- [ ] Image generation (Gemini/Nano-Banana §15), then voice (§26) + captions
+- [x] Image generation: `Providers::Image` (Gemini + Fake ChunkyPNG adapters), `Media::ImageGenerationService`, `Generation::AssetsJob` (per-scene failure isolation) + `SceneAssetJob`, `POST /projects/:id/assets/generate` + `POST /scenes/:id/assets/regenerate`. Frontend: image thumbnails + regenerate.
+- [ ] Voice (ElevenLabs §26) + captions, then the Remotion renderer
 - [ ] Research engine (§21)
 
 See [`ai-pipeline.md`](ai-pipeline.md).

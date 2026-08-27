@@ -48,6 +48,8 @@ gem "anthropic", "~> 1.0"
 gem "aws-sdk-s3", "~> 1.170"
 # Pure-Ruby image dimension/type detection (no ImageMagick/vips needed)
 gem "fastimage", "~> 2.3"
+# Pure-Ruby PNG generation — used by the fake image provider for offline dev/test
+gem "chunky_png", "~> 1.4"
 
 # Authentication: Devise + JWT for a token-based API (see docs/architecture.md D3)
 gem "devise", "~> 4.9"

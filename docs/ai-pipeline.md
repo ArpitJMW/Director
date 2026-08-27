@@ -62,6 +62,26 @@ allowed sets and durations/levels clamped. Records a `scene_plan` ai_generation.
 
 Requires a current script — otherwise `409 { message: "Generate a script first." }`.
 
+### Images (`Generation::AssetsJob`, queue `media`)
+
+`Media::ImageGenerationService` (spec §14, §20 step 10). For each scene whose
+`visual_type` is image-like (`image`, `split_screen`) it calls
+`Providers.image.generate(prompt: scene.visual_prompt, aspect_ratio:)`, stores the
+result via `Asset.store!` (`source_type: ai_generated`), and sets
+`scene.selected_asset` + `scene.status = "ready"`. Other visual types (chart,
+timeline, quote_card, …) are skipped for later stages.
+
+- **Provider** (`Providers::Image::Base`): `GeminiAdapter` (Nano Banana, raw REST,
+  untested live) + `FakeImageAdapter` (pure-Ruby ChunkyPNG gradient at the right
+  dimensions — offline default).
+- **Per-scene failures don't abort the batch** (spec §28); `AssetsJob` collects
+  them, logs each, and re-raises at the end so Sidekiq retries — and ready scenes
+  are skipped on the retry.
+- `Generation::SceneAssetJob` regenerates one scene's image and destroys the
+  superseded asset (storage object purged by an `Asset` `after_destroy_commit`).
+- Image cost comes from `Providers::Pricing.image_cost_usd` (flat per image) and
+  is carried on the `Result`, not derived from tokens.
+
 ## Job lifecycle (spec §28)
 
 ```
@@ -89,6 +109,8 @@ job (202), never a second job.
 | --- | --- | --- |
 | POST | `/api/v1/projects/:id/script/generate` | `202 { job, project }`, or `409 invalid_state`, or `403` |
 | POST | `/api/v1/projects/:id/storyboard/generate` | `202 { job, project }`, or `409` (no script / bad state), or `403` |
+| POST | `/api/v1/projects/:id/assets/generate` | `202` — generate images for all scenes, or `409` (no storyboard) |
+| POST | `/api/v1/scenes/:id/assets/regenerate` | `202` — regenerate one scene's image |
 | GET | `/api/v1/projects/:id/jobs` | `{ jobs: [...] }` (newest first; `?active=true` to filter) |
 
 Frontend: `useGenerateScript` / `useGenerateStoryboard` + `useProjectJobs` (polls
@@ -97,6 +119,6 @@ scene list, and invalidates both when a job finishes.
 
 ## Not yet built
 
-Research engine (§21), fact-check (§20 step 6), per-scene prompt refinement, and
-every media stage (image/voice/caption/music). `render`, `regenerate_scene`,
-`regenerate_scene_asset` still return `501`.
+Research engine (§21), fact-check (§20 step 6), non-image visual types
+(charts/timelines/quote cards), voice (§26), captions, music, and the render.
+`render` and `regenerate_scene` (full scene re-plan) still return `501`.

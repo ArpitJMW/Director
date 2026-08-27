@@ -37,25 +37,31 @@ class AiGeneration < ApplicationRecord
 
     result = yield generation
 
-    cost = Providers::Pricing.cost_usd(
-      provider: result.provider, model: result.model,
-      input_tokens: result.input_tokens, output_tokens: result.output_tokens
-    )
+    cost =
+      if result.respond_to?(:cost_usd) && result.cost_usd
+        result.cost_usd
+      else
+        Providers::Pricing.cost_usd(
+          provider: result.provider, model: result.model,
+          input_tokens: result.input_tokens, output_tokens: result.output_tokens
+        )
+      end
+
     generation.update!(
       status: "succeeded",
       finished_at: Time.current,
       latency_ms: ((Time.current - generation.started_at) * 1000).round,
-      prompt_tokens: result.input_tokens,
-      completion_tokens: result.output_tokens,
-      total_tokens: result.total_tokens,
+      prompt_tokens: result.try(:input_tokens),
+      completion_tokens: result.try(:output_tokens),
+      total_tokens: result.try(:total_tokens),
       cost_usd: cost,
       provider_request_id: result.provider_request_id,
-      response: { stop_reason: result.stop_reason, text_length: result.text.length }
+      response: response_summary(result)
     )
     GenerationLog.create!(
       project: project, ai_generation: generation, scene: scene, level: "info",
       stage: kind, message: "#{kind} via #{result.provider}/#{result.model}",
-      data: { cost_usd: cost, tokens: result.total_tokens }
+      data: { cost_usd: cost, tokens: result.try(:total_tokens) }
     )
     result
   rescue => e
@@ -69,6 +75,15 @@ class AiGeneration < ApplicationRecord
     )
     raise
   end
+
+  def self.response_summary(result)
+    if result.respond_to?(:text)
+      { stop_reason: result.stop_reason, text_length: result.text.length }
+    else
+      { content_type: result.try(:content_type), byte_size: result.try(:byte_size) }
+    end
+  end
+  private_class_method :response_summary
 
   def duration_ms
     return latency_ms if latency_ms

@@ -69,6 +69,43 @@ RSpec.describe "Api::V1::Pipeline", type: :request do
     end
   end
 
+  describe "POST /api/v1/projects/:id/assets/generate" do
+    it "409s without a storyboard" do
+      post "/api/v1/projects/#{project.public_id}/assets/generate", headers: headers
+      expect(response).to have_http_status(:conflict)
+    end
+
+    it "generates images for the storyboard scenes", :inline_jobs do
+      Ai::ScriptService.new(project: project).call
+      Ai::ScenePlannerService.new(project: project).call
+
+      post "/api/v1/projects/#{project.public_id}/assets/generate", headers: headers
+      expect(response).to have_http_status(:accepted)
+
+      image_scenes = project.reload.scenes.select { |s| s.visual_type == "image" }
+      expect(image_scenes.map(&:selected_asset)).to all(be_present)
+      expect(project.status).to eq("generating_assets")
+    end
+  end
+
+  describe "POST /api/v1/scenes/:id/assets/regenerate" do
+    it "enqueues a single-scene regeneration", :inline_jobs do
+      Ai::ScriptService.new(project: project).call
+      Ai::ScenePlannerService.new(project: project).call
+      scene = project.reload.scenes.find { |s| s.visual_type == "image" }
+
+      post "/api/v1/scenes/#{scene.public_id}/assets/regenerate", headers: headers
+      expect(response).to have_http_status(:accepted)
+      expect(scene.reload.selected_asset).to be_present
+    end
+
+    it "guards by project ownership" do
+      scene = create(:scene, project: create(:project))
+      post "/api/v1/scenes/#{scene.public_id}/assets/regenerate", headers: headers
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
   describe "still-stubbed actions" do
     it "returns 501 for rendering" do
       post "/api/v1/projects/#{project.public_id}/render", headers: headers
