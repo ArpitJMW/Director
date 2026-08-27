@@ -12,6 +12,11 @@ module Providers
     @image ||= build_image
   end
 
+  # The configured voice/TTS provider (spec §15, §26).
+  def voice
+    @voice ||= build_voice
+  end
+
   # Test hooks.
   def llm=(adapter)
     @llm = adapter
@@ -21,9 +26,14 @@ module Providers
     @image = adapter
   end
 
+  def voice=(adapter)
+    @voice = adapter
+  end
+
   def reset!
     @llm = nil
     @image = nil
+    @voice = nil
   end
 
   def build_llm
@@ -45,6 +55,17 @@ module Providers
     when "gemini" then Image::GeminiAdapter.new
     when "fake" then Image::FakeImageAdapter.new
     else raise ArgumentError, "unknown IMAGE_PROVIDER: #{provider.inspect}"
+    end
+  end
+
+  def build_voice
+    provider = ENV["VOICE_PROVIDER"].presence
+    provider ||= ENV["ELEVENLABS_API_KEY"].present? ? "elevenlabs" : "fake"
+
+    case provider
+    when "elevenlabs" then Voice::ElevenLabsAdapter.new
+    when "fake" then Voice::FakeVoiceAdapter.new
+    else raise ArgumentError, "unknown VOICE_PROVIDER: #{provider.inspect}"
     end
   end
 end

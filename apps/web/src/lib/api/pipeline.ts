@@ -45,6 +45,10 @@ export function useGenerateAssets(projectId: string) {
   return useStageMutation(projectId, "assets/generate");
 }
 
+export function useGenerateVoice(projectId: string) {
+  return useStageMutation(projectId, "voice/generate");
+}
+
 export function useRegenerateSceneAsset(projectId: string) {
   const qc = useQueryClient();
   return useMutation({

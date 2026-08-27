@@ -106,6 +106,29 @@ RSpec.describe "Api::V1::Pipeline", type: :request do
     end
   end
 
+  describe "POST /api/v1/projects/:id/voice/generate" do
+    it "409s without a storyboard" do
+      post "/api/v1/projects/#{project.public_id}/voice/generate", headers: headers
+      expect(response).to have_http_status(:conflict)
+    end
+
+    it "narrates the scenes", :inline_jobs do
+      Ai::ScriptService.new(project: project).call
+      Ai::ScenePlannerService.new(project: project).call
+
+      post "/api/v1/projects/#{project.public_id}/voice/generate", headers: headers
+      expect(response).to have_http_status(:accepted)
+
+      scenes = project.reload.scenes
+      expect(scenes.map { |s| s.current_voice_generation }).to all(be_present)
+      expect(project.status).to eq("generating_voice")
+
+      get "/api/v1/projects/#{project.public_id}/scenes", headers: headers
+      expect(json["scenes"].first["captions"]).to be_present
+      expect(json["scenes"].first.dig("narration_audio", "url")).to be_present
+    end
+  end
+
   describe "still-stubbed actions" do
     it "returns 501 for rendering" do
       post "/api/v1/projects/#{project.public_id}/render", headers: headers

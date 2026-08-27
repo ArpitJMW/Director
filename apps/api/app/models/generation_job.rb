@@ -7,7 +7,7 @@ class GenerationJob < ApplicationRecord
   # Pipeline stages (spec §20)
   STAGES = %w[
     validate research collect_sources story_angle script fact_check storyboard
-    visual_direction prompts assets narration captions music manifest render
+    visual_direction prompts assets voice narration captions music manifest render
     quality_check preflight finalize
   ].freeze
 

@@ -39,6 +39,7 @@ Rails.application.routes.draw do
           post "script/generate",     to: "pipeline#generate_script"
           post "storyboard/generate", to: "pipeline#generate_storyboard"
           post "assets/generate",     to: "pipeline#generate_assets"
+          post "voice/generate",      to: "pipeline#generate_voice"
           post :render,               to: "pipeline#render_video"
         end
         resources :scenes, only: [ :index ]

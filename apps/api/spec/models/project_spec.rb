@@ -65,4 +65,16 @@ RSpec.describe Project, type: :model do
     expect(build(:project, target_duration_seconds: 5)).not_to be_valid
     expect(build(:project, target_duration_seconds: 5000)).not_to be_valid
   end
+
+  it "destroys cleanly with a full media pipeline attached" do
+    project = project_with_storyboard
+    project.scenes.each do |scene|
+      Media::VoiceGenerationService.new(scene: scene).call
+      Media::ImageGenerationService.new(scene: scene).call
+    end
+
+    expect { Project.find(project.id).destroy! }.to change(Asset, :count).to(0)
+    expect(VoiceGeneration.count).to eq(0)
+    expect(Scene.count).to eq(0)
+  end
 end

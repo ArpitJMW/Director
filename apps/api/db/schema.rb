@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_27_170001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_27_180002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -372,6 +372,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_170001) do
     t.bigint "ai_generation_id"
     t.jsonb "alignment", default: {}, null: false
     t.bigint "audio_asset_id"
+    t.jsonb "captions", default: [], null: false
     t.decimal "cost_usd", precision: 12, scale: 6, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.decimal "duration_seconds", precision: 9, scale: 3
@@ -431,7 +432,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_170001) do
   add_foreign_key "video_renders", "projects"
   add_foreign_key "video_renders", "template_versions"
   add_foreign_key "voice_generations", "ai_generations", on_delete: :nullify
-  add_foreign_key "voice_generations", "assets", column: "audio_asset_id"
+  add_foreign_key "voice_generations", "assets", column: "audio_asset_id", on_delete: :nullify
   add_foreign_key "voice_generations", "projects"
   add_foreign_key "voice_generations", "scenes"
   add_foreign_key "voice_generations", "scripts"

@@ -16,10 +16,16 @@ class Scene < ApplicationRecord
   belongs_to :script, optional: true
   belongs_to :selected_asset, class_name: "Asset", optional: true
 
+  # voice_generations before assets: a vg references an audio asset, so it must
+  # be torn down first.
+  has_many :voice_generations, -> { order(:created_at) }, dependent: :destroy, inverse_of: :scene
   has_many :assets, dependent: :destroy
-  has_many :voice_generations, dependent: :nullify
   has_many :ai_generations, dependent: :nullify
   has_many :generation_logs, dependent: :nullify
+
+  def current_voice_generation
+    voice_generations.last
+  end
 
   validates :key, presence: true, uniqueness: { scope: :project_id }
   validates :position, presence: true,

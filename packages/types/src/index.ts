@@ -72,6 +72,12 @@ export interface Script {
   updated_at: string;
 }
 
+export interface CaptionCue {
+  text: string;
+  start: number;
+  end: number;
+}
+
 export interface SceneResource {
   id: string;
   project_id: string;
@@ -81,6 +87,12 @@ export interface SceneResource {
   failure_reason: string | null;
   scene: SceneContract;
   selected_asset: AssetResource | null;
+  narration_audio: {
+    url: string | null;
+    duration_seconds: number | null;
+    provider: string;
+  } | null;
+  captions: CaptionCue[];
   created_at: string;
   updated_at: string;
 }
@@ -172,6 +184,7 @@ export type GenerationStage =
   | "visual_direction"
   | "prompts"
   | "assets"
+  | "voice"
   | "narration"
   | "captions"
   | "music"

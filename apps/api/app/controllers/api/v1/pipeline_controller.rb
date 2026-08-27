@@ -38,6 +38,18 @@ module Api
         )
       end
 
+      # POST /api/v1/projects/:id/voice/generate
+      def generate_voice
+        start_stage(
+          stage: "voice",
+          job: Generation::VoiceJob,
+          allowed: -> { _1.scenes.where.not(narration: [ nil, "" ]).exists? && (_1.generating_voice? || _1.may_start_voice?) },
+          advance: :start_voice!,
+          may_advance: :may_start_voice?,
+          precondition_message: "Generate a storyboard first."
+        )
+      end
+
       # POST /api/v1/scenes/:id/assets/regenerate
       def regenerate_scene_asset
         scene = scene_scope

@@ -115,7 +115,8 @@ does the UX-level auth redirect.
 - [x] Frontend: generate-script / generate-storyboard buttons, job polling (§30), script + scene display
 - [x] Object storage: `Storage::Service` (disk + S3/R2 adapters), `Asset.store!` (transactional, provenance, FastImage dimensions), signed URLs, `POST /projects/:id/assets` upload, `GET /files` disk delivery. See [`storage.md`](storage.md)
 - [x] Image generation: `Providers::Image` (Gemini + Fake ChunkyPNG adapters), `Media::ImageGenerationService`, `Generation::AssetsJob` (per-scene failure isolation) + `SceneAssetJob`, `POST /projects/:id/assets/generate` + `POST /scenes/:id/assets/regenerate`. Frontend: image thumbnails + regenerate.
-- [ ] Voice (ElevenLabs §26) + captions, then the Remotion renderer
+- [x] Voice + captions: `Providers::Voice` (ElevenLabs + Fake WAV adapters), `Media::VoiceGenerationService` + `Media::CaptionService` (timed cues from alignment §26), `Generation::VoiceJob`, `POST /projects/:id/voice/generate`. Frontend: per-scene `<audio>` + caption count.
+- [ ] Music, then the Remotion renderer (`apps/renderer`) → MP4
 - [ ] Research engine (§21)
 
 See [`ai-pipeline.md`](ai-pipeline.md).

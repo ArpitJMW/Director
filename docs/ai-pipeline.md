@@ -82,6 +82,26 @@ timeline, quote_card, …) are skipped for later stages.
 - Image cost comes from `Providers::Pricing.image_cost_usd` (flat per image) and
   is carried on the `Result`, not derived from tokens.
 
+### Voice + captions (`Generation::VoiceJob`, queue `media`)
+
+`Media::VoiceGenerationService` (spec §14, §20 steps 11-12, §26). Per scene with
+narration: `Providers.voice.synthesize` → stores an `audio` asset → derives timed
+caption cues from the character alignment (`Media::CaptionService`) → creates a
+`VoiceGeneration` (audio_asset, `alignment`, `captions`, duration, cost) and
+supersedes any earlier one for that scene. Voice id from
+`project.settings["voice_id"]` or the provider default.
+
+- **Provider** (`Providers::Voice::Base`): `ElevenLabsAdapter` (`/with-timestamps`,
+  raw REST, untested live) + `FakeVoiceAdapter` (silent WAV sized to the text +
+  synthetic even alignment — offline default).
+- **`Media::CaptionService`** groups words (≤7 words / ≤2.6s per cue) using word
+  boundaries from the alignment; falls back to one untimed cue if alignment is
+  missing.
+- `VoiceJob` isolates per-scene failures and skips scenes already narrated with
+  the same text on retry.
+- `SceneSerializer` exposes `narration_audio {url,duration,provider}` and
+  `captions[]` for the renderer.
+
 ## Job lifecycle (spec §28)
 
 ```
@@ -110,6 +130,7 @@ job (202), never a second job.
 | POST | `/api/v1/projects/:id/script/generate` | `202 { job, project }`, or `409 invalid_state`, or `403` |
 | POST | `/api/v1/projects/:id/storyboard/generate` | `202 { job, project }`, or `409` (no script / bad state), or `403` |
 | POST | `/api/v1/projects/:id/assets/generate` | `202` — generate images for all scenes, or `409` (no storyboard) |
+| POST | `/api/v1/projects/:id/voice/generate` | `202` — narrate + caption every scene, or `409` |
 | POST | `/api/v1/scenes/:id/assets/regenerate` | `202` — regenerate one scene's image |
 | GET | `/api/v1/projects/:id/jobs` | `{ jobs: [...] }` (newest first; `?active=true` to filter) |
 
@@ -120,5 +141,5 @@ scene list, and invalidates both when a job finishes.
 ## Not yet built
 
 Research engine (§21), fact-check (§20 step 6), non-image visual types
-(charts/timelines/quote cards), voice (§26), captions, music, and the render.
-`render` and `regenerate_scene` (full scene re-plan) still return `501`.
+(charts/timelines/quote cards), music, and the render. `render` and
+`regenerate_scene` (full scene re-plan) still return `501`.

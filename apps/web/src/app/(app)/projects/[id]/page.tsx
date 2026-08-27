@@ -10,6 +10,7 @@ import {
   useGenerateAssets,
   useGenerateScript,
   useGenerateStoryboard,
+  useGenerateVoice,
   useProjectJobs,
   useRegenerateSceneAsset,
 } from "@/lib/api/pipeline";
@@ -25,15 +26,18 @@ export default function ProjectPage() {
   const generateScript = useGenerateScript(id);
   const generateStoryboard = useGenerateStoryboard(id);
   const generateAssets = useGenerateAssets(id);
+  const generateVoice = useGenerateVoice(id);
   const regenerateSceneAsset = useRegenerateSceneAsset(id);
 
   const scriptJob = jobs?.find((j) => j.stage === "script");
   const storyboardJob = jobs?.find((j) => j.stage === "storyboard");
   const assetsJob = jobs?.find((j) => j.stage === "assets" && !j.scene_id);
+  const voiceJob = jobs?.find((j) => j.stage === "voice");
   const scriptRunning = Boolean(scriptJob?.active);
   const storyboardRunning = Boolean(storyboardJob?.active);
   const assetsRunning = jobs?.some((j) => j.stage === "assets" && j.active) ?? false;
-  const anyRunning = scriptRunning || storyboardRunning || assetsRunning;
+  const voiceRunning = Boolean(voiceJob?.active);
+  const anyRunning = scriptRunning || storyboardRunning || assetsRunning || voiceRunning;
 
   // When a job finishes, refresh the project + scenes.
   const wasRunning = useRef(false);
@@ -153,6 +157,14 @@ export default function ProjectPage() {
             >
               {assetsRunning ? "Generating images…" : "Generate images"}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!scenes?.length || voiceRunning || generateVoice.isPending}
+              onClick={() => generateVoice.mutate()}
+            >
+              {voiceRunning ? "Narrating…" : "Generate narration"}
+            </Button>
             {!script && (
               <span className="text-xs text-muted">Generate a script first.</span>
             )}
@@ -195,16 +207,28 @@ export default function ProjectPage() {
                   {s.scene.narration && (
                     <p className="mt-1 line-clamp-2 text-sm text-muted">{s.scene.narration}</p>
                   )}
-                  {s.selected_asset && (
-                    <button
-                      type="button"
-                      className="mt-1 text-xs text-accent disabled:opacity-50"
-                      disabled={assetsRunning}
-                      onClick={() => regenerateSceneAsset.mutate(s.id)}
-                    >
-                      Regenerate image
-                    </button>
-                  )}
+                  <div className="mt-1 flex items-center gap-3 text-xs">
+                    {s.selected_asset && (
+                      <button
+                        type="button"
+                        className="text-accent disabled:opacity-50"
+                        disabled={assetsRunning}
+                        onClick={() => regenerateSceneAsset.mutate(s.id)}
+                      >
+                        Regenerate image
+                      </button>
+                    )}
+                    {s.narration_audio?.url && (
+                      <audio
+                        controls
+                        src={s.narration_audio.url}
+                        className="h-7 max-w-[220px]"
+                      />
+                    )}
+                    {s.captions.length > 0 && (
+                      <span className="text-muted">{s.captions.length} caption cues</span>
+                    )}
+                  </div>
                 </div>
               </li>
             ))}
