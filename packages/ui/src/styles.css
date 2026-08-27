@@ -1,0 +1,64 @@
+/* Design tokens for the Clipify UI. Imported by the web app's globals.css.
+   Raw values live on :root (light) and a prefers-dark media query; the
+   @theme inline block maps them onto Tailwind color utilities. */
+
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222 20% 11%);
+
+  --surface-1: hsl(0 0% 100%);
+  --surface-2: hsl(220 14% 96%);
+  --surface-3: hsl(220 13% 91%);
+
+  --border: hsl(220 13% 88%);
+  --muted: hsl(220 9% 46%);
+  --ring: hsl(221 83% 53%);
+
+  --accent: hsl(221 83% 53%);
+  --accent-foreground: hsl(0 0% 100%);
+
+  --success: hsl(142 71% 40%);
+  --warning: hsl(38 92% 50%);
+  --warning-foreground: hsl(28 74% 26%);
+  --danger: hsl(0 72% 51%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: hsl(222 24% 8%);
+    --foreground: hsl(210 20% 92%);
+
+    --surface-1: hsl(222 20% 11%);
+    --surface-2: hsl(222 18% 15%);
+    --surface-3: hsl(222 16% 20%);
+
+    --border: hsl(222 14% 24%);
+    --muted: hsl(220 12% 60%);
+    --ring: hsl(213 94% 68%);
+
+    --accent: hsl(213 94% 68%);
+    --accent-foreground: hsl(222 47% 11%);
+
+    --success: hsl(142 65% 55%);
+    --warning: hsl(38 92% 60%);
+    --warning-foreground: hsl(40 90% 88%);
+    --danger: hsl(0 72% 62%);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+}

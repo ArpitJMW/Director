@@ -1,0 +1,12 @@
+# Queue priorities map to the spec's pipeline stages (§13).
+:concurrency: 5
+:queues:
+  - [critical, 4]
+  - [default, 3]
+  - [research, 2]
+  - [script, 2]
+  - [storyboard, 2]
+  - [media, 2]
+  - [render, 1]
+  - [policy, 1]
+  - [low, 1]

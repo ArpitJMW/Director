@@ -1,0 +1,23 @@
+# PostgreSQL. Versions 9.5 and up are supported.
+#
+# Local development connects over the Unix domain socket as the current OS user
+# (peer authentication). Set DATABASE_URL to override in any environment.
+#
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  <<: *default
+  database: clipify_development
+
+test:
+  <<: *default
+  database: clipify_test
+
+production:
+  <<: *default
+  database: clipify_production
+  username: clipify
+  password: <%= ENV["CLIPIFY_DATABASE_PASSWORD"] %>

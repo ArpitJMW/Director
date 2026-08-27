@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+.turbo/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# Logs
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Ruby / Rails (apps/api has its own .gitignore too)
+apps/api/tmp/
+apps/api/log/
+apps/api/storage/
+apps/api/.bundle/
+
+# Media / rendered output
+/out/
+*.mp4
+!docs/**/*.mp4

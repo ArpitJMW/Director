@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+# Runs the web server and Sidekiq worker together via Procfile.dev.
+# Falls back to just the web server if a process manager isn't installed.
+
+if system("gem list --silent --installed foreman") || system("which overmind > /dev/null 2>&1")
+  manager = system("which overmind > /dev/null 2>&1") ? "overmind start -f" : "foreman start -f"
+  exec "#{manager} Procfile.dev"
+else
+  warn "Note: install foreman (`gem install foreman`) or overmind to run web + worker together."
+  warn "Starting the web server only. Run `bundle exec sidekiq` in another terminal for jobs.\n\n"
+  exec "./bin/rails", "server", *ARGV
+end

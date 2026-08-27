@@ -1,0 +1,10 @@
+packages:
+  - "apps/web"
+  - "apps/renderer"
+  - "packages/*"
+
+# Postinstall scripts allowed to run (pnpm 11 supply-chain gate).
+# esbuild (vitest) and unrs-resolver (eslint) fetch platform binaries.
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
