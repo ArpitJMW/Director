@@ -6,7 +6,11 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "@clipify/ui";
 import { useProject, useProjectScenes, projectKeys } from "@/lib/api/projects";
-import { useGenerateScript, useProjectJobs } from "@/lib/api/pipeline";
+import {
+  useGenerateScript,
+  useGenerateStoryboard,
+  useProjectJobs,
+} from "@/lib/api/pipeline";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { PipelineProgress } from "@/components/pipeline-progress";
 
@@ -17,18 +21,23 @@ export default function ProjectPage() {
   const { data: scenes } = useProjectScenes(id);
   const { data: jobs } = useProjectJobs(id);
   const generateScript = useGenerateScript(id);
+  const generateStoryboard = useGenerateStoryboard(id);
 
   const scriptJob = jobs?.find((j) => j.stage === "script");
+  const storyboardJob = jobs?.find((j) => j.stage === "storyboard");
   const scriptRunning = Boolean(scriptJob?.active);
+  const storyboardRunning = Boolean(storyboardJob?.active);
+  const anyRunning = scriptRunning || storyboardRunning;
 
-  // When a job finishes, refresh the project so current_script / status update.
+  // When a job finishes, refresh the project + scenes.
   const wasRunning = useRef(false);
   useEffect(() => {
-    if (wasRunning.current && !scriptRunning) {
+    if (wasRunning.current && !anyRunning) {
       qc.invalidateQueries({ queryKey: projectKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: projectKeys.scenes(id) });
     }
-    wasRunning.current = scriptRunning;
-  }, [scriptRunning, id, qc]);
+    wasRunning.current = anyRunning;
+  }, [anyRunning, id, qc]);
 
   if (isLoading) return <p className="text-sm text-muted">Loading…</p>;
   if (isError) return <p className="text-sm text-danger">{(error as Error).message}</p>;
@@ -118,10 +127,29 @@ export default function ProjectPage() {
           <CardTitle>Storyboard</CardTitle>
         </CardHeader>
         <CardContent>
-          {!scenes?.length && (
-            <p className="text-sm text-muted">
-              No scenes yet — they appear after storyboard generation.
-            </p>
+          <div className="mb-4 flex items-center gap-3">
+            <Button
+              size="sm"
+              disabled={!script || storyboardRunning || generateStoryboard.isPending}
+              onClick={() => generateStoryboard.mutate()}
+            >
+              {storyboardRunning
+                ? "Planning…"
+                : scenes?.length
+                  ? "Regenerate storyboard"
+                  : "Generate storyboard"}
+            </Button>
+            {!script && (
+              <span className="text-xs text-muted">Generate a script first.</span>
+            )}
+            {storyboardJob?.status === "failed" && (
+              <span className="text-xs text-danger">
+                Failed: {storyboardJob.failure_reason ?? "unknown error"}
+              </span>
+            )}
+          </div>
+          {!scenes?.length && !storyboardRunning && (
+            <p className="text-sm text-muted">No scenes yet.</p>
           )}
           <ol className="flex flex-col gap-3">
             {scenes?.map((s) => (

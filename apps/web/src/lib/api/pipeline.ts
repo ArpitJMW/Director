@@ -18,12 +18,12 @@ export function useProjectJobs(projectId: string) {
   });
 }
 
-export function useGenerateScript(projectId: string) {
+function useStageMutation(projectId: string, stagePath: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
       apiFetch<{ job: GenerationJob; project: Project }>(
-        `/projects/${projectId}/script/generate`,
+        `/projects/${projectId}/${stagePath}`,
         { method: "POST" },
       ),
     onSuccess: () => {
@@ -31,4 +31,12 @@ export function useGenerateScript(projectId: string) {
       qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
     },
   });
+}
+
+export function useGenerateScript(projectId: string) {
+  return useStageMutation(projectId, "script/generate");
+}
+
+export function useGenerateStoryboard(projectId: string) {
+  return useStageMutation(projectId, "storyboard/generate");
 }

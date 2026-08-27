@@ -51,6 +51,17 @@ Fields: `title_options`, `selected_title`, `hook`, `story_angle`, `sections`,
 Bad/unparseable JSON marks the generation `failed` and raises
 `Ai::ScriptService::Error`.
 
+### Storyboard + Visual Director (`Generation::StoryboardJob`, queue `storyboard`)
+
+`Ai::ScenePlannerService` (spec §20 steps 7-9, §23). Takes `project.current_script`,
+asks the LLM to split the narration into scenes and — acting as visual director —
+pick the most useful `visual_type` per beat (deliberately varied, *not* one image
+per sentence). Full-replace: `project.scenes.destroy_all` then recreate in order,
+each following the Scene JSON contract (§19), with enum values coerced to the
+allowed sets and durations/levels clamped. Records a `scene_plan` ai_generation.
+
+Requires a current script — otherwise `409 { message: "Generate a script first." }`.
+
 ## Job lifecycle (spec §28)
 
 ```
@@ -77,14 +88,15 @@ job (202), never a second job.
 | Method | Path | Result |
 | --- | --- | --- |
 | POST | `/api/v1/projects/:id/script/generate` | `202 { job, project }`, or `409 invalid_state`, or `403` |
+| POST | `/api/v1/projects/:id/storyboard/generate` | `202 { job, project }`, or `409` (no script / bad state), or `403` |
 | GET | `/api/v1/projects/:id/jobs` | `{ jobs: [...] }` (newest first; `?active=true` to filter) |
 
-Frontend: `useGenerateScript` + `useProjectJobs` (polls every 2s while a job is
-active); the project detail page shows the generated script when
-`project.current_script` is present.
+Frontend: `useGenerateScript` / `useGenerateStoryboard` + `useProjectJobs` (polls
+every 2s while a job is active). The project detail page shows the script and the
+scene list, and invalidates both when a job finishes.
 
 ## Not yet built
 
-Research engine (§21), storyboard / scene planner (§20 steps 7-9), visual
-director (§23), fact-check, and every media stage. `generate_storyboard`,
-`render`, `regenerate_scene`, `regenerate_scene_asset` still return `501`.
+Research engine (§21), fact-check (§20 step 6), per-scene prompt refinement, and
+every media stage (image/voice/caption/music). `render`, `regenerate_scene`,
+`regenerate_scene_asset` still return `501`.

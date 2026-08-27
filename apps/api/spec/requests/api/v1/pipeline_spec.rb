@@ -52,6 +52,23 @@ RSpec.describe "Api::V1::Pipeline", type: :request do
     end
   end
 
+  describe "POST /api/v1/projects/:id/storyboard/generate" do
+    it "409s when the project has no script yet" do
+      post "/api/v1/projects/#{project.public_id}/storyboard/generate", headers: headers
+      expect(response).to have_http_status(:conflict)
+      expect(json["message"]).to match(/script first/i)
+    end
+
+    it "enqueues a storyboard job once a script exists", :inline_jobs do
+      Ai::ScriptService.new(project: project).call
+
+      post "/api/v1/projects/#{project.public_id}/storyboard/generate", headers: headers
+      expect(response).to have_http_status(:accepted)
+      expect(project.reload.scenes.count).to be >= 2
+      expect(project.status).to eq("storyboarding")
+    end
+  end
+
   describe "still-stubbed actions" do
     it "returns 501 for rendering" do
       post "/api/v1/projects/#{project.public_id}/render", headers: headers

@@ -5,33 +5,54 @@ module Api
     class PipelineController < ResourceController
       # POST /api/v1/projects/:id/script/generate
       def generate_script
+        start_stage(
+          stage: "script",
+          job: Generation::ScriptJob,
+          allowed: -> { _1.script_generating? || _1.may_start_script? },
+          advance: :start_script!,
+          may_advance: :may_start_script?
+        )
+      end
+
+      # POST /api/v1/projects/:id/storyboard/generate
+      def generate_storyboard
+        start_stage(
+          stage: "storyboard",
+          job: Generation::StoryboardJob,
+          allowed: -> { _1.current_script.present? && (_1.storyboarding? || _1.may_start_storyboard?) },
+          advance: :start_storyboard!,
+          may_advance: :may_start_storyboard?,
+          precondition_message: "Generate a script first."
+        )
+      end
+
+      def render_video           = not_implemented(project_scope, "rendering")
+      def regenerate_scene       = not_implemented(scene_scope, "scene regeneration")
+      def regenerate_scene_asset = not_implemented(scene_scope, "scene asset regeneration")
+
+      private
+
+      def start_stage(stage:, job:, allowed:, advance:, may_advance:, precondition_message: nil)
         project = project_scope
         authorize project, :generate?
 
-        unless project.script_generating? || project.may_start_script?
-          return render_invalid_state(project)
+        return render_invalid_state(project, precondition_message) unless allowed.call(project)
+
+        existing = project.generation_jobs.active.find_by(stage: stage)
+        if existing
+          return render json: { job: GenerationJobSerializer.call(existing) }, status: :accepted
         end
 
-        existing = project.generation_jobs.active.find_by(stage: "script")
-        return render_job(existing, status: :accepted) if existing
-
-        gen_job = project.generation_jobs.create!(stage: "script", queue: "script")
-        project.start_script! if project.may_start_script?
+        gen_job = project.generation_jobs.create!(stage: stage, queue: stage)
+        project.public_send(advance) if project.public_send(may_advance)
         gen_job.enqueue!
-        Generation::ScriptJob.perform_async(gen_job.id)
+        job.perform_async(gen_job.id)
 
         render json: {
           job: GenerationJobSerializer.call(gen_job.reload),
           project: ProjectSerializer.call(project)
         }, status: :accepted
       end
-
-      def generate_storyboard    = not_implemented(project_scope, "storyboard generation")
-      def render_video           = not_implemented(project_scope, "rendering")
-      def regenerate_scene       = not_implemented(scene_scope, "scene regeneration")
-      def regenerate_scene_asset = not_implemented(scene_scope, "scene asset regeneration")
-
-      private
 
       def project_scope
         Project.find_by_public_id!(params[:project_id] || params[:id])
@@ -41,14 +62,10 @@ module Api
         Scene.find_by_public_id!(params[:scene_id] || params[:id])
       end
 
-      def render_job(job, status:)
-        render json: { job: GenerationJobSerializer.call(job) }, status: status
-      end
-
-      def render_invalid_state(project)
+      def render_invalid_state(project, message = nil)
         render json: {
           error: "invalid_state",
-          message: "Cannot start script generation from status '#{project.status}'.",
+          message: message || "Cannot start this stage from status '#{project.status}'.",
           status: project.status
         }, status: :conflict
       end

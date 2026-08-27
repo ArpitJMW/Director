@@ -1,8 +1,8 @@
 module Providers
   module LLM
     # Deterministic stand-in used in tests and local development without an API
-    # key. Returns a well-formed script JSON payload so the pipeline can run
-    # end-to-end offline.
+    # key. Returns well-formed JSON for whichever stage is asking (detected from
+    # the system prompt), so the pipeline runs end-to-end offline.
     class FakeAdapter < Base
       def name = "fake"
       def default_model = "fake-1"
@@ -11,8 +11,10 @@ module Providers
         prompt = messages.map { |m| m[:content] }.join("\n")
         topic = prompt[/Topic:\s*(.+)/, 1]&.strip || "the subject"
 
+        text = system.to_s.include?("storyboard engine") ? storyboard_json(topic) : script_json(topic)
+
         Result.new(
-          text: script_json(topic),
+          text: text,
           model: model || default_model,
           provider: name,
           stop_reason: "end_turn",
@@ -43,8 +45,45 @@ module Providers
                           "The common assumption breaks down when you look closer. " \
                           "Here is what actually explains #{topic}, and why it matters.",
           estimated_duration_seconds: 95,
-          creative_notes: "Keep the tone curious, not lecturing. Vary the visual treatment per section.",
+          creative_notes: "Keep the tone curious, not lecturing. Vary the visual treatment per scene.",
           claims: []
+        }.to_json
+      end
+
+      def storyboard_json(topic)
+        {
+          scenes: [
+            {
+              narration: "We open on the core question about #{topic}.",
+              visual_type: "text_animation",
+              visual_prompt: "Kinetic title treatment posing the central question about #{topic}",
+              caption: "What is #{topic}?",
+              duration_seconds: 6,
+              animation: "text_reveal",
+              transition: "fade",
+              background_music_level: 0.18
+            },
+            {
+              narration: "The common assumption breaks down when you look closer.",
+              visual_type: "image",
+              visual_prompt: "Detailed illustration revealing the hidden mechanism behind #{topic}, dramatic lighting",
+              caption: "The assumption breaks down",
+              duration_seconds: 8,
+              animation: "ken_burns",
+              transition: "slide",
+              background_music_level: 0.15
+            },
+            {
+              narration: "Here is what actually explains #{topic}, and why it matters.",
+              visual_type: "animated_diagram",
+              visual_prompt: "Clean animated diagram explaining how #{topic} works, labelled parts",
+              caption: "How it actually works",
+              duration_seconds: 9,
+              animation: "scale",
+              transition: "fade",
+              background_music_level: 0.12
+            }
+          ]
         }.to_json
       end
     end

@@ -105,8 +105,9 @@ does the UX-level auth redirect.
 **Phase 3 (AI pipeline) — in progress:**
 - [x] Provider abstraction (`Providers::LLM::Base` + Anthropic + Fake adapters), `Providers::Pricing`, `AiGeneration.track!` ledger wrapper
 - [x] Script generation: `Ai::ScriptService` (spec §22) + `Generation::ScriptJob` (Sidekiq, retryable) + `POST /projects/:id/script/generate` (202, idempotent) + `GET /projects/:id/jobs`
-- [x] Frontend: generate-script button, job polling (§30), script display
-- [ ] Research engine (§21), storyboard / scene planner (§20), visual director (§23)
+- [x] Storyboard + visual director: `Ai::ScenePlannerService` (§20 steps 7-9, §23) + `Generation::StoryboardJob` + `POST /projects/:id/storyboard/generate` — full-replace scenes following the §19 contract
+- [x] Frontend: generate-script / generate-storyboard buttons, job polling (§30), script + scene display
+- [ ] Research engine (§21), media stages (image/voice/caption/music)
 
 See [`ai-pipeline.md`](ai-pipeline.md).
 
