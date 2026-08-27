@@ -34,8 +34,10 @@ Rails.application.routes.draw do
       # --- Application resources (spec §29) --------------------------------
       resources :projects, only: [ :index, :show, :create, :update, :destroy ] do
         member do
-          get :preflight, to: "preflight_reports#show"
-          # Pipeline actions — implemented in Phase 3+.
+          get  :preflight,               to: "preflight_reports#show"
+          post "preflight/generate",     to: "pipeline#generate_preflight"
+          post "preflight/acknowledge",  to: "pipeline#acknowledge_preflight"
+          # Pipeline actions.
           post "script/generate",     to: "pipeline#generate_script"
           post "storyboard/generate", to: "pipeline#generate_storyboard"
           post "assets/generate",     to: "pipeline#generate_assets"

@@ -18,6 +18,7 @@ import {
 import { useProjectRenders } from "@/lib/api/renders";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { PipelineProgress } from "@/components/pipeline-progress";
+import { PreflightCard } from "@/components/preflight-card";
 
 export default function ProjectPage() {
   const { id } = useParams<{ id: string }>();
@@ -139,6 +140,8 @@ export default function ProjectPage() {
           </CardContent>
         </Card>
       )}
+
+      {Boolean(scenes?.length) && <PreflightCard projectId={id} />}
 
       {Boolean(scenes?.length) && (
         <Card>

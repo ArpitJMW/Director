@@ -56,14 +56,13 @@ Whole JS workspace: `pnpm turbo run typecheck lint test`. Rails tests: `cd apps/
 | [`docs/ai-pipeline.md`](docs/ai-pipeline.md) | Provider abstraction, script generation, job lifecycle |
 | [`docs/storage.md`](docs/storage.md) | Object storage adapters, `Asset.store!`, signed URLs |
 | [`docs/video-engine.md`](docs/video-engine.md) | Render manifest, Remotion renderer, render job |
-| `docs/video-engine.md` | Remotion compositions & templates _(tbd)_ |
-| `docs/policy.md` | Quality & YouTube preflight engine _(tbd)_ |
+| [`docs/policy.md`](docs/policy.md) | Quality & YouTube preflight engine |
 | `docs/runbook.md` | Ops / on-call _(tbd)_ |
 
 ## Build status
 
 **Phase 2 (Foundation) — complete.** **Phase 3 (AI pipeline) — most of the way:**
-the full V1 flow runs — paste a topic → script → storyboard → per-scene images →
-narration + timed captions → **rendered MP4** (Remotion). Music, quality checks,
-preflight, and billing are still to come. See
+paste a topic → script → storyboard → per-scene images → narration + timed
+captions → **rendered MP4** (Remotion) → **YouTube preflight report**. Music,
+fact-check, research engine, and billing are still to come. See
 [`docs/architecture.md`](docs/architecture.md).

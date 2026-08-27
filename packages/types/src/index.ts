@@ -160,12 +160,19 @@ export interface VideoRender {
   created_at: string;
 }
 
+export type CheckVerdict = "pass" | "warn" | "review";
+
+export interface PreflightWarning {
+  check: string;
+  message: string;
+}
+
 export interface PreflightReport {
   id: string;
   status: "ready" | "review_required";
-  checks: Record<string, "pass" | "warn" | "review">;
+  checks: Record<string, CheckVerdict>;
   ai_disclosure: "required" | "not_required" | "review";
-  warnings: unknown[];
+  warnings: PreflightWarning[];
   acknowledged_at: string | null;
   acknowledged_by: string | null;
   video_render_id: string | null;

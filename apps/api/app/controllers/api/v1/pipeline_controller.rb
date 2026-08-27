@@ -80,11 +80,33 @@ module Api
         )
       end
 
+      # POST /api/v1/projects/:id/preflight/generate
+      def generate_preflight
+        start_stage(
+          stage: "preflight",
+          job: Generation::PreflightJob,
+          allowed: -> { _1.scenes.exists? },
+          precondition_message: "Generate a storyboard first."
+        )
+      end
+
+      # POST /api/v1/projects/:id/preflight/acknowledge
+      def acknowledge_preflight
+        project = project_scope
+        authorize project, :generate?
+
+        report = project.preflight_reports.order(created_at: :desc).first
+        return head :not_found if report.nil?
+
+        report.acknowledge!(current_user)
+        render json: { preflight: PreflightReportSerializer.call(report) }
+      end
+
       def regenerate_scene = not_implemented(scene_scope, "scene regeneration")
 
       private
 
-      def start_stage(stage:, job:, allowed:, advance:, may_advance:, precondition_message: nil)
+      def start_stage(stage:, job:, allowed:, advance: nil, may_advance: nil, precondition_message: nil)
         project = project_scope
         authorize project, :generate?
 
@@ -96,7 +118,7 @@ module Api
         end
 
         gen_job = project.generation_jobs.create!(stage: stage, queue: job.sidekiq_options["queue"] || "default")
-        project.public_send(advance) if project.public_send(may_advance)
+        project.public_send(advance) if advance && project.public_send(may_advance)
         gen_job.enqueue!
         job.perform_async(gen_job.id)
 

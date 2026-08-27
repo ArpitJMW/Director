@@ -148,6 +148,30 @@ RSpec.describe "Api::V1::Pipeline", type: :request do
     end
   end
 
+  describe "preflight" do
+    it "generates a report and lets the user acknowledge it", :inline_jobs do
+      Ai::ScriptService.new(project: project).call
+      Ai::ScenePlannerService.new(project: project).call
+
+      post "/api/v1/projects/#{project.public_id}/preflight/generate", headers: headers
+      expect(response).to have_http_status(:accepted)
+
+      get "/api/v1/projects/#{project.public_id}/preflight", headers: headers
+      expect(response).to have_http_status(:ok)
+      expect(json.dig("preflight", "checks")).to include("originality", "advertiser_suitability")
+      expect(json.dig("preflight", "disclaimer")).to match(/not.*guarantee/i)
+
+      post "/api/v1/projects/#{project.public_id}/preflight/acknowledge", headers: headers
+      expect(response).to have_http_status(:ok)
+      expect(json.dig("preflight", "acknowledged_at")).to be_present
+    end
+
+    it "409s before a storyboard exists" do
+      post "/api/v1/projects/#{project.public_id}/preflight/generate", headers: headers
+      expect(response).to have_http_status(:conflict)
+    end
+  end
+
   describe "still-stubbed actions" do
     it "guards scene regeneration by ownership" do
       scene = create(:scene, project: create(:project))

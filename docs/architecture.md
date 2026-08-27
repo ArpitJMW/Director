@@ -124,7 +124,8 @@ does the UX-level auth redirect.
 - [x] Image generation: `Providers::Image` (Gemini + Fake ChunkyPNG adapters), `Media::ImageGenerationService`, `Generation::AssetsJob` (per-scene failure isolation) + `SceneAssetJob`, `POST /projects/:id/assets/generate` + `POST /scenes/:id/assets/regenerate`. Frontend: image thumbnails + regenerate.
 - [x] Voice + captions: `Providers::Voice` (ElevenLabs + Fake WAV adapters), `Media::VoiceGenerationService` + `Media::CaptionService` (timed cues from alignment §26), `Generation::VoiceJob`, `POST /projects/:id/voice/generate`. Frontend: per-scene `<audio>` + caption count.
 - [x] Remotion renderer: `apps/renderer` (`ClipifyVideo` composition, scene clips + captions + Ken Burns), `Media::RenderManifestBuilder` (§20 step 14), `Video::RenderVideo` (shell-out), `Generation::RenderJob`, `POST /projects/:id/render`. Frontend: render button + `<video>` player. See [`video-engine.md`](video-engine.md). _Real render needs headless-Chrome system libs — see `apps/renderer/README.md`._
-- [ ] Music, thumbnails, `@remotion/transitions`
+- [x] YouTube preflight engine (§32/§33): `Policy::PreflightEngine` + 7 checkers (originality via LLM, rest heuristic), `Policy::DisclosureChecker` (§7), `Generation::PreflightJob`, `POST /projects/:id/preflight/generate` + `/acknowledge`. Frontend: `PreflightCard`. See [`policy.md`](policy.md)
+- [ ] Music, thumbnails, `@remotion/transitions`, fact-check (§20 step 6), full §31 QA
 - [ ] Research engine (§21)
 
 See [`ai-pipeline.md`](ai-pipeline.md).

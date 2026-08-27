@@ -11,7 +11,14 @@ module Providers
         prompt = messages.map { |m| m[:content] }.join("\n")
         topic = prompt[/Topic:\s*(.+)/, 1]&.strip || "the subject"
 
-        text = system.to_s.include?("storyboard engine") ? storyboard_json(topic) : script_json(topic)
+        text =
+          if system.to_s.include?("policy analyst")
+            { verdict: "pass", reason: "The script follows a specific, well-defined angle." }.to_json
+          elsif system.to_s.include?("storyboard engine")
+            storyboard_json(topic)
+          else
+            script_json(topic)
+          end
 
         Result.new(
           text: text,
