@@ -31,13 +31,8 @@ VOICE_PROVIDER=edge_tts
 EDGE_TTS_VOICE=en-US-AriaNeural
 ```
 
-One extra install for voice:
-
-```bash
-pip install edge-tts        # or: pipx install edge-tts
-```
-
-Then restart Rails + Sidekiq.
+No extra installs — the edge-tts helper is Node (`apps/renderer/edge-tts.mjs`,
+`msedge-tts`), pulled in by `pnpm install`. Just restart Rails + Sidekiq.
 
 **Free-tier limits:** Gemini 2.5 Flash ≈ 250 requests/day; Cloudflare Workers AI
 ≈ 10,000 neurons/day (~hundreds of FLUX images); edge-tts unlimited.
@@ -63,6 +58,7 @@ the eventual credit/pricing model (spec §34/§35).
   `steps: 4`. FLUX schnell outputs 1024×1024; the renderer crops to the target
   aspect ratio.
 - **`Providers::Voice::EdgeTtsAdapter`** — shells out to
-  `bin/edge_tts_synth.py <voice> <out.mp3>` (text on stdin), which streams audio
-  + `WordBoundary` events and prints `{duration, words:[{text,start,end}]}`.
-  `Media::CaptionService` accepts this word-level shape directly.
+  `node apps/renderer/edge-tts.mjs <voice> <out.mp3>` (text on stdin;
+  `EDGE_TTS_COMMAND` overrides), which streams audio + `WordBoundary` events and
+  prints `{duration, words:[{text,start,end}]}`. `Media::CaptionService` accepts
+  this word-level shape directly.

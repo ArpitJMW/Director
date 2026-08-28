@@ -4,11 +4,19 @@ require "tmpdir"
 module Providers
   module Voice
     # Microsoft Edge TTS (spec §15, §26). Free, no API key, word-level timing.
-    # Shells out to bin/edge_tts_synth.py (requires: pip install edge-tts).
+    # Shells out to the Node helper in apps/renderer (installed via `pnpm install`).
     class EdgeTtsAdapter < Base
-      SCRIPT = Rails.root.join("bin/edge_tts_synth.py").to_s
       DEFAULT_VOICE = ENV.fetch("EDGE_TTS_VOICE", "en-US-AriaNeural")
-      PYTHON = ENV.fetch("PYTHON_BIN", "python3")
+
+      def self.command
+        ENV["EDGE_TTS_COMMAND"].presence ||
+          "node #{Rails.root.join('../renderer/edge-tts.mjs')}"
+      end
+
+      def initialize(command: self.class.command)
+        super()
+        @command = command
+      end
 
       def name = "edge_tts"
       def default_model = "edge-neural"
@@ -19,8 +27,8 @@ module Providers
 
         Dir.mktmpdir("clipify-tts") do |dir|
           out = File.join(dir, "audio.mp3")
-          stdout, stderr, status = Open3.capture3(PYTHON, SCRIPT, voice, out, stdin_data: text)
-          raise Error, "edge-tts failed (#{status.exitstatus}): #{stderr.strip}" unless status.success?
+          stdout, stderr, status = Open3.capture3(*@command.split, voice, out, stdin_data: text)
+          raise Error, "edge-tts failed (#{status.exitstatus}): #{stderr.strip.last(400)}" unless status.success?
           raise Error, "edge-tts produced no audio" unless File.exist?(out) && File.size(out).positive?
 
           meta = JSON.parse(stdout)
