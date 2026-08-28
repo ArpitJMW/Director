@@ -9,7 +9,7 @@ pipeline runs offline).
 | --- | --- | --- |
 | LLM (script, storyboard, preflight) | `groq` · `gemini` · `anthropic` · `fake` | `GROQ_API_KEY` → `ANTHROPIC_API_KEY` → `GEMINI_API_KEY` |
 | Images (one per scene) | `pollinations` · `cloudflare` · `gemini` · `fake` | `CLOUDFLARE_API_TOKEN`; `gemini` needs `GEMINI_IMAGE_ENABLED=1`; `pollinations` is opt-in |
-| Voice (narration + timing) | `edge_tts` · `elevenlabs` · `fake` | `ELEVENLABS_API_KEY` (edge_tts is opt-in only) |
+| Voice (narration + timing) | `gemini_tts` · `edge_tts` · `elevenlabs` · `fake` | `ELEVENLABS_API_KEY` (gemini_tts / edge_tts are opt-in only) |
 | Render | Remotion, local | — (no API) |
 
 There is **no AI-video-generation cost** — the video is composited locally by
@@ -26,12 +26,20 @@ GROQ_API_KEY=...                   # https://console.groq.com/keys  (no card)
 IMAGE_PROVIDER=pollinations        # https://pollinations.ai  (no key at all)
 IMAGE_MODEL=flux
 
-VOICE_PROVIDER=edge_tts            # Microsoft Edge TTS, no key
-EDGE_TTS_VOICE=en-US-AriaNeural
+VOICE_PROVIDER=gemini_tts          # Gemini TTS — needs GEMINI_API_KEY (below)
+GEMINI_API_KEY=...                 # https://aistudio.google.com/apikey
+GEMINI_TTS_VOICE=Charon            # Charon | Kore | Puck | Aoede | Fenrir | ...
 ```
 
-No extra installs — the edge-tts helper is Node (`apps/renderer/edge-tts.mjs`,
-`msedge-tts`), pulled in by `pnpm install`. Just restart Rails + Sidekiq.
+**Voice options, in order of preference for the free stack:**
+- `gemini_tts` — Gemini TTS. Works on a plain Gemini key even though *image*
+  generation on the same key is quota-limited. Multilingual (handles
+  Hindi/Hinglish). No word timing from the API, so captions are evenly spaced.
+- `edge_tts` — Microsoft Edge TTS via `apps/renderer/edge-tts.mjs` (`msedge-tts`,
+  from `pnpm install`). Best word-level timing, but its WebSocket to Microsoft
+  is **blocked on some ISPs/networks** — if narration jobs fail with
+  "Connect Error", switch to `gemini_tts`.
+- `elevenlabs` — needs a paid plan (free tier can't use API voices).
 
 **Free-tier limits:** Groq ≈ 14,400 requests/day (a video ≈ 5 calls);
 Pollinations is rate-limited under load (set `POLLINATIONS_TOKEN` for more);
