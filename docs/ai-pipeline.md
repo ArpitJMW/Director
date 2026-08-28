@@ -15,9 +15,10 @@ Providers.llm                      -> the configured LLM adapter
 
 `Providers::LLM::Result` is `{ text, model, provider, stop_reason, usage:{input_tokens,output_tokens}, provider_request_id, raw }`.
 
-**Selection:** `LLM_PROVIDER` env (`anthropic` | `fake`). Defaults to `anthropic`
-when `ANTHROPIC_API_KEY` is set, otherwise `fake` — so the pipeline runs offline
-with no key. Tests always use `FakeAdapter` (`spec/support/providers.rb`).
+**Selection:** `LLM_PROVIDER` env (`gemini` | `anthropic` | `fake`); auto-detects
+from whichever key is present, else `fake` — so the pipeline runs offline with no
+key. Tests always use `FakeAdapter` (`spec/support/providers.rb`). Full provider
+setup + cost table: [`providers.md`](providers.md).
 
 **Cost:** `Providers::Pricing.cost_usd` — a per-model USD/1M-token table.
 

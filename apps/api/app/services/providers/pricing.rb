@@ -7,12 +7,18 @@ module Providers
         "claude-opus-5" => { input: 5.0, output: 25.0 },
         "claude-sonnet-5" => { input: 2.0, output: 10.0 },
         "claude-haiku-4-5" => { input: 1.0, output: 5.0 }
+      },
+      "gemini" => {
+        "gemini-2.5-flash" => { input: 0.15, output: 1.25 },
+        "gemini-2.5-flash-lite" => { input: 0.10, output: 0.40 },
+        "gemini-2.5-pro" => { input: 1.25, output: 10.0 }
       }
     }.freeze
 
-    # Flat USD cost per generated image.
+    # Flat USD cost per generated image. Free-tier providers list 0.0.
     IMAGE_TABLE = {
-      "gemini" => { "gemini-2.5-flash-image" => 0.039 }
+      "gemini" => { "gemini-2.5-flash-image" => 0.039 },
+      "cloudflare" => { "@cf/black-forest-labs/flux-1-schnell" => 0.0 }
     }.freeze
 
     module_function

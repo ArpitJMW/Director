@@ -38,10 +38,13 @@ module Providers
 
   def build_llm
     provider = ENV["LLM_PROVIDER"].presence
-    provider ||= ENV["ANTHROPIC_API_KEY"].present? ? "anthropic" : "fake"
+    provider ||= "anthropic" if ENV["ANTHROPIC_API_KEY"].present?
+    provider ||= "gemini" if ENV["GEMINI_API_KEY"].present?
+    provider ||= "fake"
 
     case provider
     when "anthropic" then LLM::AnthropicAdapter.new
+    when "gemini" then LLM::GeminiAdapter.new
     when "fake" then LLM::FakeAdapter.new
     else raise ArgumentError, "unknown LLM_PROVIDER: #{provider.inspect}"
     end
@@ -49,10 +52,13 @@ module Providers
 
   def build_image
     provider = ENV["IMAGE_PROVIDER"].presence
-    provider ||= ENV["GEMINI_API_KEY"].present? ? "gemini" : "fake"
+    provider ||= "cloudflare" if ENV["CLOUDFLARE_API_TOKEN"].present?
+    provider ||= "gemini" if ENV["GEMINI_API_KEY"].present?
+    provider ||= "fake"
 
     case provider
     when "gemini" then Image::GeminiAdapter.new
+    when "cloudflare" then Image::CloudflareAdapter.new
     when "fake" then Image::FakeImageAdapter.new
     else raise ArgumentError, "unknown IMAGE_PROVIDER: #{provider.inspect}"
     end
@@ -60,10 +66,12 @@ module Providers
 
   def build_voice
     provider = ENV["VOICE_PROVIDER"].presence
-    provider ||= ENV["ELEVENLABS_API_KEY"].present? ? "elevenlabs" : "fake"
+    provider ||= "elevenlabs" if ENV["ELEVENLABS_API_KEY"].present?
+    provider ||= "fake"
 
     case provider
     when "elevenlabs" then Voice::ElevenLabsAdapter.new
+    when "edge_tts", "edge" then Voice::EdgeTtsAdapter.new
     when "fake" then Voice::FakeVoiceAdapter.new
     else raise ArgumentError, "unknown VOICE_PROVIDER: #{provider.inspect}"
     end

@@ -8,10 +8,18 @@ module Media
     MAX_SECONDS_PER_CUE = 2.6
 
     # @param text [String] the narration
-    # @param alignment [Hash] { characters:, starts:, ends: }
+    # @param alignment [Hash] either character-level
+    #   ({ characters:, starts:, ends: }, ElevenLabs) or word-level
+    #   ({ words: [{ text:, start:, end: }] }, edge-tts)
     # @return [Array<Hash{text:,start:,end:}>]
     def build(text:, alignment:)
-      words = word_spans(alignment.symbolize_keys)
+      normalized = alignment.symbolize_keys
+      words =
+        if normalized[:words].present?
+          normalized[:words].map(&:symbolize_keys)
+        else
+          word_spans(normalized)
+        end
       return fallback(text) if words.empty?
 
       cues = []
