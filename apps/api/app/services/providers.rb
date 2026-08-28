@@ -75,6 +75,7 @@ module Providers
     case provider
     when "elevenlabs" then Voice::ElevenLabsAdapter.new
     when "edge_tts", "edge" then Voice::EdgeTtsAdapter.new
+    when "gemini_tts", "gemini" then Voice::GeminiTtsAdapter.new
     when "fake" then Voice::FakeVoiceAdapter.new
     else raise ArgumentError, "unknown VOICE_PROVIDER: #{provider.inspect}"
     end

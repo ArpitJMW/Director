@@ -113,6 +113,39 @@ RSpec.describe Providers::Image::CloudflareAdapter do
   end
 end
 
+RSpec.describe Providers::Voice::GeminiTtsAdapter do
+  subject(:adapter) { described_class.new(api_key: "k") }
+
+  it "wraps the returned PCM in a WAV container and derives even word timing" do
+    pcm = "\x00\x01".b * 24_000 # 1 second of 16-bit mono @ 24kHz
+    stub_request(:post, %r{gemini-2\.5-flash-preview-tts:generateContent})
+      .to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          candidates: [ { content: { parts: [ { inlineData: { mimeType: "audio/L16;rate=24000", data: Base64.strict_encode64(pcm) } } ] } } ]
+        }.to_json
+      )
+
+    result = adapter.synthesize(text: "one two three four")
+
+    expect(result.provider).to eq("gemini_tts")
+    expect(result.content_type).to eq("audio/wav")
+    expect(result.audio_bytes[0, 4]).to eq("RIFF")
+    expect(result.duration_seconds).to be_within(0.05).of(1.0)
+    expect(result.alignment[:words].map { |w| w[:text] }).to eq(%w[one two three four])
+    expect(result.alignment[:words].last[:end]).to be_within(0.05).of(1.0)
+  end
+
+  it "raises when the response has no audio" do
+    stub_request(:post, /generativelanguage/).to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: { candidates: [ { finishReason: "SAFETY", content: { parts: [ { text: "no" } ] } } ] }.to_json
+    )
+    expect { adapter.synthesize(text: "hi") }.to raise_error(Providers::Voice::Base::Error, /no audio/)
+  end
+end
+
 RSpec.describe Providers::Voice::EdgeTtsAdapter do
   subject(:adapter) { described_class.new }
 

@@ -3,34 +3,40 @@ import { railsFetch } from "@/lib/server/rails";
 
 // Transparent authenticated proxy: /api/v1/<anything> -> Rails /api/v1/<anything>
 // with the JWT attached from the httpOnly cookie. The token never reaches the
-// browser.
+// browser. Passes bodies through as bytes so binary responses (images, audio,
+// video from /api/v1/files) are not corrupted.
 async function proxy(request: Request, path: string[]): Promise<Response> {
   const url = new URL(request.url);
   const target = `/api/v1/${path.join("/")}${url.search}`;
 
   const method = request.method;
-  const body = method === "GET" || method === "HEAD" ? undefined : await request.text();
+  const body =
+    method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
 
-  const railsRes = await railsFetch(target, { method, body });
-
-  const text = await railsRes.text();
-  return new NextResponse(text || null, {
-    status: railsRes.status,
-    headers: {
-      "Content-Type": railsRes.headers.get("Content-Type") ?? "application/json",
-      // Surface pagination headers to the client.
-      ...pick(railsRes.headers, ["X-Total-Count", "X-Page", "X-Total-Pages"]),
-    },
+  const railsRes = await railsFetch(target, {
+    method,
+    body: body && body.byteLength > 0 ? body : undefined,
   });
-}
 
-function pick(headers: Headers, names: string[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const name of names) {
-    const value = headers.get(name);
-    if (value !== null) out[name] = value;
+  const headers = new Headers();
+  for (const name of [
+    "Content-Type",
+    "Content-Disposition",
+    "Cache-Control",
+    "X-Total-Count",
+    "X-Page",
+    "X-Total-Pages",
+  ]) {
+    const value = railsRes.headers.get(name);
+    if (value !== null) headers.set(name, value);
   }
-  return out;
+  if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+
+  const payload = await railsRes.arrayBuffer();
+  return new NextResponse(payload.byteLength ? payload : null, {
+    status: railsRes.status,
+    headers,
+  });
 }
 
 type Ctx = { params: Promise<{ path: string[] }> };

@@ -56,28 +56,35 @@ class Project < ApplicationRecord
       transitions from: :draft, to: :researching
     end
 
+    # start_* events also accept :failed so a stage can be retried in place; the
+    # controller still gates on whether the stage's real prerequisite exists.
     event :start_script do
-      transitions from: [ :draft, :researching ], to: :script_generating
+      before { self.failure_reason = nil }
+      transitions from: [ :draft, :researching, :failed ], to: :script_generating
     end
 
     event :start_storyboard do
-      transitions from: [ :draft, :script_generating, :storyboarding ], to: :storyboarding
+      before { self.failure_reason = nil }
+      transitions from: [ :draft, :script_generating, :storyboarding, :failed ], to: :storyboarding
     end
 
     event :start_assets do
-      transitions from: [ :draft, :script_generating, :storyboarding, :generating_assets ], to: :generating_assets
+      before { self.failure_reason = nil }
+      transitions from: [ :draft, :script_generating, :storyboarding, :generating_assets, :failed ], to: :generating_assets
     end
 
     event :start_voice do
-      transitions from: [ :draft, :storyboarding, :generating_assets, :generating_voice ], to: :generating_voice
+      before { self.failure_reason = nil }
+      transitions from: [ :draft, :storyboarding, :generating_assets, :generating_voice, :failed ], to: :generating_voice
     end
 
     event :start_captions do
-      transitions from: :generating_voice, to: :generating_captions
+      transitions from: [ :generating_voice, :failed ], to: :generating_captions
     end
 
     event :start_render do
-      transitions from: [ :draft, :generating_assets, :generating_voice, :generating_captions, :rendering ], to: :rendering
+      before { self.failure_reason = nil }
+      transitions from: [ :draft, :generating_assets, :generating_voice, :generating_captions, :rendering, :failed ], to: :rendering
     end
 
     event :start_quality_check do
