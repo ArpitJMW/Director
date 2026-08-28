@@ -41,7 +41,7 @@ module Api
 
       def project_params
         params.require(:project).permit(
-          :title, :topic, :format, :aspect_ratio, :niche, :audience, :tone,
+          :title, :topic, :format, :aspect_ratio, :visual_style, :niche, :audience, :tone,
           :target_duration_seconds, :creator_instructions, :research_enabled,
           :template_id,
           settings: {}

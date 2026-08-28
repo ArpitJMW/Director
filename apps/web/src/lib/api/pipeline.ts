@@ -68,6 +68,7 @@ function useStageMutation(projectId: string, stagePath: string) {
 // Manual / re-run triggers (kept for regeneration from a checkpoint).
 export const useGenerateStoryboard = (id: string) => useStageMutation(id, "storyboard/generate");
 export const useGenerateAssets = (id: string) => useStageMutation(id, "assets/generate");
+export const useRegenerateAllImages = (id: string) => useStageMutation(id, "assets/generate?force=true");
 export const useRenderVideo = (id: string) => useStageMutation(id, "render");
 
 export function useRegenerateSceneAsset(projectId: string) {

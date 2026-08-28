@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@clipify/ui";
-import { useProject, useProjectScenes } from "@/lib/api/projects";
+import { useProject, useProjectScenes, useUpdateProject } from "@/lib/api/projects";
 import {
   useContinuePipeline,
   useProjectJobs,
+  useRegenerateAllImages,
   useRenderVideo,
   useRevisePipeline,
   useStartPipeline,
 } from "@/lib/api/pipeline";
+import { VISUAL_STYLES } from "@/lib/constants";
 import { useProjectRenders } from "@/lib/api/renders";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
 import { GenerationStepper } from "@/components/generation-stepper";
@@ -41,6 +43,8 @@ export default function ProjectPage() {
   const cont = useContinuePipeline(id);
   const revise = useRevisePipeline(id);
   const render = useRenderVideo(id);
+  const regenAll = useRegenerateAllImages(id);
+  const updateProject = useUpdateProject(id);
   const { data: renders } = useProjectRenders(id);
 
   if (isLoading) return <p className="text-sm text-muted">Loading…</p>;
@@ -157,14 +161,41 @@ export default function ProjectPage() {
           </div>
 
           {checkpoint === "storyboard" && (
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-1 p-4">
-              <p className="flex-1 text-sm text-muted">
-                Review the storyboard — regenerate or edit any scene. When it looks right,
-                continue to narration and rendering.
-              </p>
-              <Button disabled={cont.isPending} onClick={() => cont.mutate()}>
-                {cont.isPending ? "Continuing…" : "Looks good — continue"}
-              </Button>
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-1 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-sm text-muted">Visual style</label>
+                <select
+                  className="h-9 rounded-md border border-border bg-surface-1 px-2 text-sm"
+                  value={project.visual_style}
+                  disabled={updateProject.isPending || regenAll.isPending || running}
+                  onChange={(e) =>
+                    updateProject.mutate({ visual_style: e.target.value as typeof project.visual_style })
+                  }
+                >
+                  {VISUAL_STYLES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={regenAll.isPending || running}
+                  onClick={() => regenAll.mutate()}
+                >
+                  {regenAll.isPending || running ? "Regenerating…" : "Regenerate all images"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
+                <p className="flex-1 text-sm text-muted">
+                  Review the storyboard — regenerate or edit any scene. When it looks right,
+                  continue to narration and rendering.
+                </p>
+                <Button disabled={cont.isPending || running} onClick={() => cont.mutate()}>
+                  {cont.isPending ? "Continuing…" : "Looks good — continue"}
+                </Button>
+              </div>
             </div>
           )}
         </section>

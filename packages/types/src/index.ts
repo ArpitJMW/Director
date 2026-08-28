@@ -20,6 +20,15 @@ export type ProjectStatus =
   | "cancelled";
 
 export type ProjectFormat = "youtube_long" | "youtube_short" | "reel";
+export type VisualStyle =
+  | "cinematic"
+  | "photorealistic"
+  | "wildlife_documentary"
+  | "documentary"
+  | "3d_animation"
+  | "illustration"
+  | "anime"
+  | "watercolor";
 export type AspectRatio = "16:9" | "9:16" | "1:1";
 
 export interface User {
@@ -44,6 +53,7 @@ export interface Project {
   status: ProjectStatus;
   pipeline: PipelineState;
   format: ProjectFormat;
+  visual_style: VisualStyle;
   aspect_ratio: AspectRatio;
   niche: string | null;
   audience: string | null;
@@ -232,6 +242,7 @@ export interface CreateProjectInput {
   title: string;
   topic?: string;
   format?: ProjectFormat;
+  visual_style?: VisualStyle;
   aspect_ratio?: AspectRatio;
   niche?: string;
   audience?: string;

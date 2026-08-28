@@ -18,13 +18,18 @@ module Providers
       def name = "pollinations"
       def default_model = @model
 
-      def generate(prompt:, aspect_ratio: "16:9", model: nil)
+      def generate(prompt:, aspect_ratio: "16:9", negative_prompt: nil, seed: nil, model: nil)
         width, height = dimensions_for(aspect_ratio)
         used_model = model || @model
 
-        params = { width: width, height: height, model: used_model, nologo: "true", safe: "true" }
+        # Pollinations has no separate negative field — fold it into the prompt.
+        full_prompt = prompt.to_s
+        full_prompt += " | avoid: #{negative_prompt}" if negative_prompt.present?
+
+        params = { width: width, height: height, model: used_model, nologo: "true", safe: "true", enhance: "true" }
+        params[:seed] = seed if seed
         params[:token] = @token if @token
-        uri = URI("#{HOST}/#{ERB::Util.url_encode(prompt.to_s)}?#{URI.encode_www_form(params)}")
+        uri = URI("#{HOST}/#{ERB::Util.url_encode(full_prompt)}?#{URI.encode_www_form(params)}")
 
         bytes, content_type = fetch(uri)
 

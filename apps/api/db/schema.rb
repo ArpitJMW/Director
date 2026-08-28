@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_28_090002) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -193,6 +193,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_090002) do
     t.string "failed_from_status"
     t.text "failure_reason"
     t.string "format", default: "youtube_long", null: false
+    t.integer "image_seed"
     t.jsonb "metadata", default: {}, null: false
     t.string "niche"
     t.string "pipeline_checkpoint"
@@ -209,6 +210,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_090002) do
     t.text "topic"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.string "visual_style", default: "cinematic", null: false
     t.index ["created_at"], name: "index_projects_on_created_at"
     t.index ["public_id"], name: "index_projects_on_public_id", unique: true
     t.index ["template_id"], name: "index_projects_on_template_id"

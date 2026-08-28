@@ -24,21 +24,26 @@ module Media
 
       @scene.update!(status: "generating_asset", failure_reason: nil)
 
+      built = ImagePromptBuilder.new(scene: @scene, project: @project).call
+
       generation = nil
       result = AiGeneration.track!(
         project: @project, scene: @scene, kind: "image", provider_kind: "image",
         provider: @provider.name, model: @provider.default_model,
-        request: { prompt: @scene.visual_prompt, aspect_ratio: @project.aspect_ratio }
+        request: built.merge(aspect_ratio: @project.aspect_ratio)
       ) do |gen|
         generation = gen
-        @provider.generate(prompt: @scene.visual_prompt, aspect_ratio: @project.aspect_ratio)
+        @provider.generate(
+          prompt: built[:prompt], negative_prompt: built[:negative_prompt],
+          seed: built[:seed], aspect_ratio: @project.aspect_ratio
+        )
       end
 
       asset = Asset.store!(
         project: @project, scene: @scene, asset_type: "image",
         io: result.io, content_type: result.content_type,
         source_type: "ai_generated", provider: result.provider, model: result.model,
-        prompt: @scene.visual_prompt, provider_request_id: result.provider_request_id,
+        prompt: built[:prompt], provider_request_id: result.provider_request_id,
         cost_usd: result.cost_usd, ai_generation: generation, realistic: false
       )
 

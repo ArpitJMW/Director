@@ -3,15 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, Card, CardContent, Input, Label, Textarea } from "@clipify/ui";
-import type { ProjectFormat } from "@clipify/types";
+import type { ProjectFormat, VisualStyle } from "@clipify/types";
 import { useCreateProject } from "@/lib/api/projects";
 import { useTemplates } from "@/lib/api/templates";
-
-const FORMATS: { value: ProjectFormat; label: string }[] = [
-  { value: "youtube_long", label: "YouTube (16:9)" },
-  { value: "youtube_short", label: "Short (9:16)" },
-  { value: "reel", label: "Reel (9:16)" },
-];
+import { FORMATS, VISUAL_STYLES } from "@/lib/constants";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -22,6 +17,7 @@ export default function NewProjectPage() {
     title: "",
     topic: "",
     format: "youtube_long" as ProjectFormat,
+    visual_style: "cinematic" as VisualStyle,
     target_duration_seconds: 120,
     template_id: "",
   });
@@ -40,6 +36,7 @@ export default function NewProjectPage() {
                   title: form.title,
                   topic: form.topic || undefined,
                   format: form.format,
+                  visual_style: form.visual_style,
                   target_duration_seconds: Number(form.target_duration_seconds),
                   template_id: form.template_id || undefined,
                 },
@@ -100,6 +97,28 @@ export default function NewProjectPage() {
                   }
                 />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="visual_style">Visual style</Label>
+              <select
+                id="visual_style"
+                className="h-10 rounded-md border border-border bg-surface-1 px-3 text-sm"
+                value={form.visual_style}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, visual_style: e.target.value as VisualStyle }))
+                }
+              >
+                {VISUAL_STYLES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted">
+                Applied to every generated image. Match it to your topic — e.g. “Wildlife
+                documentary” for nature videos.
+              </p>
             </div>
 
             <div className="flex flex-col gap-1.5">

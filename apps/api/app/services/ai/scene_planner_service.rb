@@ -36,18 +36,35 @@ module Ai
     def system_prompt
       <<~PROMPT
         You are the storyboard engine and visual director for an AI video studio.
-        Split the narration into a sequence of scenes. Do NOT generate one image
-        per sentence — as visual director, choose the most useful visual treatment
-        for each beat and deliberately vary it across the video.
+        Split the narration into a sequence of scenes.
 
         visual_type is one of: #{Scene::VISUAL_TYPES.join(', ')}
         animation is one of: #{Scene::ANIMATIONS.join(', ')}
         transition is one of: #{Scene::TRANSITIONS.join(', ')}
 
-        Rules:
-        - Scene durations should sum to roughly the target duration.
-        - Every scene has narration drawn from (not copied verbatim beyond) the script.
-        - visual_prompt describes what to generate/show; keep captions short.
+        VISUAL DIRECTION — this matters most:
+        - Most scenes should be "image" (a single AI-generated still that the
+          renderer pans/zooms). Only use chart / timeline / map / quote_card when
+          the beat is genuinely a data point, date sequence, location, or quote.
+          Use text_animation sparingly (title cards, key stats). Never use
+          screen_recording or split_screen unless the script explicitly calls for it.
+        - For a documentary or real-world topic, almost every scene is "image".
+
+        WRITING visual_prompt (for the "image" scenes):
+        - Write it like a photograph brief, not a sentence of narration.
+        - Always name the MAIN SUBJECT explicitly and consistently in every scene
+          (e.g. "an adult male Bengal tiger, deep orange coat with black stripes"),
+          so the subject looks the same across the video.
+        - Include: subject + setting + time of day / weather + camera angle or shot
+          type (wide / close-up / low angle / aerial) + mood/lighting.
+        - Concrete and specific. No abstract concepts, no on-screen text, no people
+          unless the script needs them.
+        - Do NOT add style words like "cinematic" or "4k" — the studio applies the
+          project's visual style automatically.
+
+        Other rules:
+        - Scene durations sum to roughly the target duration.
+        - narration is drawn from the script; captions are short (<= 6 words).
         - background_music_level is 0..1 (typically 0.10–0.20).
 
         Respond with ONLY a JSON object: { "scenes": [ { "narration": "...",
@@ -61,6 +78,8 @@ module Ai
       parts = []
       parts << "Title: #{@script.selected_title}"
       parts << "Story angle: #{@script.story_angle}"
+      parts << "Topic / niche: #{@project.niche}" if @project.niche.present?
+      parts << "Visual style: #{@project.visual_style.tr('_', ' ')}"
       parts << "Target duration: #{@project.target_duration_seconds} seconds"
       parts << "Format: #{@project.format} (#{@project.aspect_ratio})"
       parts << "Creative notes: #{@script.creative_notes}" if @script.creative_notes.present?

@@ -7,10 +7,10 @@ module Providers
       def name = "fake"
       def default_model = "fake-image-1"
 
-      def generate(prompt:, aspect_ratio: "16:9", model: nil)
+      def generate(prompt:, aspect_ratio: "16:9", negative_prompt: nil, seed: nil, model: nil)
         width, height = dimensions_for(aspect_ratio)
-        seed = Digest::SHA256.hexdigest(prompt.to_s)[0, 6].to_i(16)
-        base = ChunkyPNG::Color.from_hsv((seed % 360), 0.4, 0.85)
+        hue = Digest::SHA256.hexdigest(prompt.to_s)[0, 6].to_i(16)
+        base = ChunkyPNG::Color.from_hsv((hue % 360), 0.4, 0.85)
 
         png = ChunkyPNG::Image.new(width, height, base)
         height.times do |y|

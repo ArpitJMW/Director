@@ -6,6 +6,7 @@ class ProjectSerializer < ApplicationSerializer
       topic: record.topic,
       status: record.status,
       format: record.format,
+      visual_style: record.visual_style,
       aspect_ratio: record.aspect_ratio,
       niche: record.niche,
       audience: record.audience,

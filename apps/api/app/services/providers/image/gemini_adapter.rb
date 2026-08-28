@@ -21,12 +21,15 @@ module Providers
       def name = "gemini"
       def default_model = @model
 
-      def generate(prompt:, aspect_ratio: "16:9", model: nil)
+      def generate(prompt:, aspect_ratio: "16:9", negative_prompt: nil, seed: nil, model: nil)
         used_model = model || @model
         uri = URI("#{ENDPOINT}/#{used_model}:generateContent")
 
+        text = "#{prompt}\n\nAspect ratio: #{aspect_ratio}."
+        text += "\nAvoid: #{negative_prompt}." if negative_prompt.present?
+
         body = {
-          contents: [ { parts: [ { text: "#{prompt}\n\nAspect ratio: #{aspect_ratio}." } ] } ],
+          contents: [ { parts: [ { text: text } ] } ],
           generationConfig: { responseModalities: [ "IMAGE" ] }
         }
 

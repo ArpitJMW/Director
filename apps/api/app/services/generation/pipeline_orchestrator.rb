@@ -74,7 +74,7 @@ module Generation
 
     # Creates the GenerationJob, advances project state, and enqueues the worker.
     # Shared by the orchestrator and the manual per-stage endpoints.
-    def enqueue(project, stage)
+    def enqueue(project, stage, args: {})
       _name, job_class, event = STAGES.find { |s| s.first == stage }
       raise ArgumentError, "unknown stage #{stage.inspect}" unless job_class
 
@@ -82,7 +82,7 @@ module Generation
       return active if active
 
       gen_job = project.generation_jobs.create!(
-        stage: stage, queue: job_class.sidekiq_options["queue"] || "default"
+        stage: stage, queue: job_class.sidekiq_options["queue"] || "default", args: args
       )
       if event
         guard = "may_#{event.to_s.delete_suffix('!')}?"

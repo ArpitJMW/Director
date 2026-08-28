@@ -6,6 +6,7 @@ class Project < ApplicationRecord
 
   FORMATS = %w[youtube_long youtube_short reel].freeze
   ASPECT_RATIOS = %w[16:9 9:16 1:1].freeze
+  VISUAL_STYLES = %w[cinematic photorealistic wildlife_documentary documentary 3d_animation illustration anime watercolor].freeze
 
   # Lifecycle stages (spec §18). `failed` and `cancelled` are terminal-ish;
   # `completed` is terminal.
@@ -35,6 +36,7 @@ class Project < ApplicationRecord
   validates :title, presence: true, length: { maximum: 200 }
   validates :format, inclusion: { in: FORMATS }
   validates :aspect_ratio, inclusion: { in: ASPECT_RATIOS }
+  validates :visual_style, inclusion: { in: VISUAL_STYLES }
   validates :target_duration_seconds,
     numericality: { greater_than_or_equal_to: 15, less_than_or_equal_to: 1800 }
 

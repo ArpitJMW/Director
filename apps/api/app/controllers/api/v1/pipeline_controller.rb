@@ -54,7 +54,8 @@ module Api
       def generate_assets
         start_stage("assets",
           allowed: -> { _1.scenes.exists? && (_1.generating_assets? || _1.may_start_assets?) },
-          precondition_message: "Generate a storyboard first.")
+          precondition_message: "Generate a storyboard first.",
+          args: params[:force].present? ? { force: true } : {})
       end
 
       def generate_voice
@@ -106,13 +107,13 @@ module Api
 
       private
 
-      def start_stage(stage, allowed:, precondition_message: nil)
+      def start_stage(stage, allowed:, precondition_message: nil, args: {})
         project = project_scope
         authorize project, :generate?
 
         return render_invalid_state(project, precondition_message) unless allowed.call(project)
 
-        gen_job = Generation::PipelineOrchestrator.enqueue(project, stage)
+        gen_job = Generation::PipelineOrchestrator.enqueue(project, stage, args: args)
         render json: {
           job: GenerationJobSerializer.call(gen_job),
           project: ProjectSerializer.call(project.reload)

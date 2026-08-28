@@ -10,8 +10,10 @@ module Providers
         "1:1" => [ 1024, 1024 ]
       }.freeze
 
+      # @param negative_prompt [String, nil] things to avoid (provider support varies)
+      # @param seed [Integer, nil] for run-to-run visual consistency
       # @return [Providers::Image::Result]
-      def generate(prompt:, aspect_ratio: "16:9", model: nil)
+      def generate(prompt:, aspect_ratio: "16:9", negative_prompt: nil, seed: nil, model: nil)
         raise NotImplementedError
       end
 

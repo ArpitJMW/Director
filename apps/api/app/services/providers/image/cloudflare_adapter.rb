@@ -24,11 +24,15 @@ module Providers
       def name = "cloudflare"
       def default_model = @model
 
-      def generate(prompt:, aspect_ratio: "16:9", model: nil)
+      def generate(prompt:, aspect_ratio: "16:9", negative_prompt: nil, seed: nil, model: nil)
         used_model = model || @model
         uri = URI("https://api.cloudflare.com/client/v4/accounts/#{@account_id}/ai/run/#{used_model}")
 
-        res = post(uri, { prompt: prompt, steps: 4 })
+        payload = { prompt: prompt, steps: 4 }
+        # SDXL-family models accept these; FLUX schnell ignores them.
+        payload[:negative_prompt] = negative_prompt if negative_prompt.present?
+        payload[:seed] = seed if seed
+        res = post(uri, payload)
         bytes, content_type = extract_image(res)
 
         Result.new(

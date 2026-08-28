@@ -7,7 +7,8 @@ module Generation
 
     def run(gen_job)
       project = gen_job.project
-      scenes = project.scenes.where.not(status: "ready")
+      # `force` (set when the user changes visual style) redoes every image scene.
+      scenes = gen_job.args["force"] ? project.scenes : project.scenes.where.not(status: "ready")
 
       generated = 0
       failures = []
