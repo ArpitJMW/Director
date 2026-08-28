@@ -7,37 +7,42 @@ pipeline runs offline).
 
 | Layer | `*_PROVIDER` values | auto-detect key |
 | --- | --- | --- |
-| LLM (script, storyboard, preflight) | `gemini` · `anthropic` · `fake` | `GEMINI_API_KEY` → `ANTHROPIC_API_KEY` |
-| Images (one per scene) | `cloudflare` · `gemini` · `fake` | `CLOUDFLARE_API_TOKEN` → `GEMINI_API_KEY` |
+| LLM (script, storyboard, preflight) | `groq` · `gemini` · `anthropic` · `fake` | `GROQ_API_KEY` → `ANTHROPIC_API_KEY` → `GEMINI_API_KEY` |
+| Images (one per scene) | `pollinations` · `cloudflare` · `gemini` · `fake` | `CLOUDFLARE_API_TOKEN`; `gemini` needs `GEMINI_IMAGE_ENABLED=1`; `pollinations` is opt-in |
 | Voice (narration + timing) | `edge_tts` · `elevenlabs` · `fake` | `ELEVENLABS_API_KEY` (edge_tts is opt-in only) |
 | Render | Remotion, local | — (no API) |
 
 There is **no AI-video-generation cost** — the video is composited locally by
 Remotion from images + Ken Burns + narration.
 
-## Free stack ($0 / video)
+## Free stack ($0 / video) — verified working
 
 ```dotenv
 # apps/api/.env
-LLM_PROVIDER=gemini
-LLM_MODEL=gemini-2.5-flash
-GEMINI_API_KEY=...                 # https://aistudio.google.com/apikey
+LLM_PROVIDER=groq
+LLM_MODEL=openai/gpt-oss-120b
+GROQ_API_KEY=...                   # https://console.groq.com/keys  (no card)
 
-IMAGE_PROVIDER=cloudflare
-CLOUDFLARE_ACCOUNT_ID=...          # dash.cloudflare.com → AI → Workers AI
-CLOUDFLARE_API_TOKEN=...           # create a token with "Workers AI" permission
+IMAGE_PROVIDER=pollinations        # https://pollinations.ai  (no key at all)
+IMAGE_MODEL=flux
 
-VOICE_PROVIDER=edge_tts
+VOICE_PROVIDER=edge_tts            # Microsoft Edge TTS, no key
 EDGE_TTS_VOICE=en-US-AriaNeural
 ```
 
 No extra installs — the edge-tts helper is Node (`apps/renderer/edge-tts.mjs`,
 `msedge-tts`), pulled in by `pnpm install`. Just restart Rails + Sidekiq.
 
-**Free-tier limits:** Gemini 2.5 Flash ≈ 250 requests/day; Cloudflare Workers AI
-≈ 10,000 neurons/day (~hundreds of FLUX images); edge-tts unlimited.
-**Commercial note:** edge-tts and ElevenLabs' free tier don't grant commercial
+**Free-tier limits:** Groq ≈ 14,400 requests/day (a video ≈ 5 calls);
+Pollinations is rate-limited under load (set `POLLINATIONS_TOKEN` for more);
+edge-tts unlimited.
+**Commercial note:** edge-tts and Groq's free tier don't grant broad commercial
 rights — fine for validation, revisit before monetising.
+
+**Alternatives that also work free** (need a bit more setup):
+Cloudflare Workers AI FLUX (`IMAGE_PROVIDER=cloudflare`, needs
+`CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN`); Gemini text
+(`LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.6-flash`, `GEMINI_API_KEY`).
 
 ## Paid options (better quality)
 
