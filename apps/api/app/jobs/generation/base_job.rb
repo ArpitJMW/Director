@@ -16,6 +16,7 @@ module Generation
       gen_job.update(failure_reason: error&.message, error: { class: error&.class&.name })
       gen_job.mark_failed! if gen_job.may_mark_failed?
       project = gen_job.project
+      project.update!(pipeline_checkpoint: nil) if project.pipeline_mode == "auto"
       project.mark_failed! if project.may_mark_failed?
     end
 
@@ -29,6 +30,9 @@ module Generation
       run(@gen_job)
 
       @gen_job.succeed! if @gen_job.may_succeed?
+
+      # Auto-run: chain to the next stage or pause at a review checkpoint.
+      Generation::PipelineOrchestrator.advance(@gen_job.project.reload, @gen_job.stage)
     rescue => e
       @gen_job&.update(failure_reason: e.message, error: { class: e.class.name })
       GenerationLog.create!(

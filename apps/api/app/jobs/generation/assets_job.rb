@@ -34,7 +34,9 @@ module Generation
         stage: "assets", message: "Generated #{generated} images (#{failures.size} failed)"
       )
 
-      raise "#{failures.size} scene(s) failed image generation" if failures.any?
+      # Partial failure keeps the images that worked; a scene stays retryable on
+      # its own (spec §28). Only a total wipeout fails the stage.
+      raise "all #{failures.size} scene(s) failed image generation" if generated.zero? && failures.any?
     end
   end
 end

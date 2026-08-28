@@ -18,6 +18,11 @@ class ProjectSerializer < ApplicationSerializer
       disclosure: record.disclosure,
       template_id: record.template&.public_id,
       scene_count: record.scenes.size,
+      pipeline: {
+        mode: record.pipeline_mode,
+        checkpoint: record.pipeline_checkpoint,
+        active_stage: record.generation_jobs.active.where(scene_id: nil).order(:created_at).last&.stage
+      },
       created_at: ts(record.created_at),
       updated_at: ts(record.updated_at),
       completed_at: ts(record.completed_at)

@@ -34,6 +34,8 @@ Rails.application.routes.draw do
       # --- Application resources (spec §29) --------------------------------
       resources :projects, only: [ :index, :show, :create, :update, :destroy ] do
         member do
+          post "pipeline/start",         to: "pipeline#pipeline_start"
+          post "pipeline/continue",      to: "pipeline#pipeline_continue"
           get  :preflight,               to: "preflight_reports#show"
           post "preflight/generate",     to: "pipeline#generate_preflight"
           post "preflight/acknowledge",  to: "pipeline#acknowledge_preflight"

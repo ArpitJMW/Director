@@ -172,6 +172,32 @@ RSpec.describe "Api::V1::Pipeline", type: :request do
     end
   end
 
+  describe "auto pipeline" do
+    it "POST /pipeline/start kicks off the chain", :inline_jobs do
+      post "/api/v1/projects/#{project.public_id}/pipeline/start", headers: headers
+      expect(response).to have_http_status(:accepted)
+
+      project.reload
+      expect(project.pipeline_mode).to eq("auto")
+      expect(project.pipeline_checkpoint).to eq("storyboard")
+      expect(project.scenes.count).to be >= 2
+    end
+
+    it "POST /pipeline/continue resumes from the checkpoint", :inline_jobs do
+      post "/api/v1/projects/#{project.public_id}/pipeline/start", headers: headers
+      post "/api/v1/projects/#{project.public_id}/pipeline/continue", headers: headers
+
+      expect(response).to have_http_status(:accepted)
+      expect(project.reload.pipeline_checkpoint).to eq("review")
+    end
+
+    it "POST /pipeline/continue 409s when not paused" do
+      post "/api/v1/projects/#{project.public_id}/pipeline/continue", headers: headers
+      expect(response).to have_http_status(:conflict)
+      expect(json["error"]).to eq("not_paused")
+    end
+  end
+
   describe "still-stubbed actions" do
     it "guards scene regeneration by ownership" do
       scene = create(:scene, project: create(:project))

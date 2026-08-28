@@ -21,6 +21,10 @@ module Generation
           generated += 1
         rescue => e
           failures << { scene: scene.key, error: e.message }
+          GenerationLog.create!(
+            project: project, generation_job: gen_job, scene: scene, level: "error",
+            stage: "voice", message: "scene #{scene.key}: #{e.message}"
+          )
         end
       end
 
@@ -30,7 +34,10 @@ module Generation
         stage: "voice", message: "Narrated #{generated} scenes (#{failures.size} failed)"
       )
 
-      raise "#{failures.size} scene(s) failed narration" if failures.any?
+      # Partial failure (e.g. provider rate limit) keeps the scenes that worked
+      # and stays retryable per-scene (spec §28). Only a total wipeout fails the
+      # stage.
+      raise "all #{failures.size} scene(s) failed narration" if generated.zero? && failures.any?
     end
   end
 end

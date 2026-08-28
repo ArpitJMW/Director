@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_27_180002) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_28_090002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -195,6 +195,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_180002) do
     t.string "format", default: "youtube_long", null: false
     t.jsonb "metadata", default: {}, null: false
     t.string "niche"
+    t.string "pipeline_checkpoint"
+    t.string "pipeline_mode", default: "manual", null: false
     t.string "public_id", null: false
     t.boolean "research_enabled", default: false, null: false
     t.jsonb "settings", default: {}, null: false
@@ -409,12 +411,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_180002) do
   add_foreign_key "generation_logs", "generation_jobs", on_delete: :nullify
   add_foreign_key "generation_logs", "projects"
   add_foreign_key "generation_logs", "scenes", on_delete: :nullify
-  add_foreign_key "music_tracks", "assets"
+  add_foreign_key "music_tracks", "assets", on_delete: :nullify
   add_foreign_key "music_tracks", "projects"
-  add_foreign_key "preflight_reports", "ai_generations", column: "generated_by_generation_id"
+  add_foreign_key "preflight_reports", "ai_generations", column: "generated_by_generation_id", on_delete: :nullify
   add_foreign_key "preflight_reports", "projects"
   add_foreign_key "preflight_reports", "users", column: "acknowledged_by_id"
-  add_foreign_key "preflight_reports", "video_renders"
+  add_foreign_key "preflight_reports", "video_renders", on_delete: :nullify
   add_foreign_key "projects", "template_versions", on_delete: :nullify
   add_foreign_key "projects", "templates"
   add_foreign_key "projects", "users"
@@ -428,7 +430,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_180002) do
   add_foreign_key "templates", "assets", column: "preview_asset_id", on_delete: :nullify
   add_foreign_key "templates", "template_versions", column: "latest_version_id", on_delete: :nullify
   add_foreign_key "templates", "users", column: "owner_id"
-  add_foreign_key "video_renders", "assets", column: "output_asset_id"
+  add_foreign_key "video_renders", "assets", column: "output_asset_id", on_delete: :nullify
   add_foreign_key "video_renders", "projects"
   add_foreign_key "video_renders", "template_versions"
   add_foreign_key "voice_generations", "ai_generations", on_delete: :nullify
