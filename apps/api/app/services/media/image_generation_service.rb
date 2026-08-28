@@ -4,9 +4,10 @@ module Media
   class ImageGenerationService
     Error = Class.new(StandardError)
 
-    # visual_types this service can produce a generated image for. Other types
-    # (chart, timeline, map, quote_card, ...) are handled by later stages.
-    IMAGE_TYPES = %w[image split_screen].freeze
+    # visual_types this service produces a generated still for (used as the
+    # scene background, animated by the renderer). text_animation / chart /
+    # timeline / quote_card / screen_recording get a text card instead.
+    IMAGE_TYPES = %w[image split_screen generated_video animated_diagram map].freeze
 
     def initialize(scene:, provider: Providers.image)
       @scene = scene

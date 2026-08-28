@@ -11,14 +11,18 @@ module Providers
       "gemini" => {
         "gemini-2.5-flash" => { input: 0.15, output: 1.25 },
         "gemini-2.5-flash-lite" => { input: 0.10, output: 0.40 },
-        "gemini-2.5-pro" => { input: 1.25, output: 10.0 }
-      }
+        "gemini-2.5-pro" => { input: 1.25, output: 10.0 },
+        "gemini-3.6-flash" => { input: 0.15, output: 1.25 }
+      },
+      # Groq's developer tier has no per-token charge.
+      "groq" => Hash.new({ input: 0.0, output: 0.0 })
     }.freeze
 
-    # Flat USD cost per generated image. Free-tier providers list 0.0.
+    # Flat USD cost per generated image. Free providers list 0.0.
     IMAGE_TABLE = {
-      "gemini" => { "gemini-2.5-flash-image" => 0.039 },
-      "cloudflare" => { "@cf/black-forest-labs/flux-1-schnell" => 0.0 }
+      "gemini" => { "gemini-2.5-flash-image" => 0.039, "gemini-3.1-flash-image" => 0.06 },
+      "cloudflare" => Hash.new(0.0),
+      "pollinations" => Hash.new(0.0)
     }.freeze
 
     module_function

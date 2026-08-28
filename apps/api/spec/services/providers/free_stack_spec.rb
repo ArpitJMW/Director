@@ -34,6 +34,59 @@ RSpec.describe Providers::LLM::GeminiAdapter do
   end
 end
 
+RSpec.describe Providers::LLM::GroqAdapter do
+  subject(:adapter) { described_class.new(api_key: "gsk_test", model: "openai/gpt-oss-120b") }
+
+  it "posts OpenAI-style chat completions and normalizes the response" do
+    stub_request(:post, "https://api.groq.com/openai/v1/chat/completions")
+      .to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          id: "chatcmpl-1",
+          choices: [ { message: { role: "assistant", content: '{"ok":true}' }, finish_reason: "stop" } ],
+          usage: { prompt_tokens: 200, completion_tokens: 50 }
+        }.to_json
+      )
+
+    result = adapter.chat(system: "You output JSON.", messages: [ { role: "user", content: "go" } ])
+
+    expect(result.provider).to eq("groq")
+    expect(result.text).to eq('{"ok":true}')
+    expect(result.input_tokens).to eq(200)
+    expect(result.cost_usd).to be_nil # free -> derived as 0.0 in track!
+  end
+
+  it "raises on an HTTP error" do
+    stub_request(:post, /api\.groq\.com/).to_return(status: 429, body: "slow down")
+    expect { adapter.chat(system: "s", messages: [ { role: "user", content: "x" } ]) }
+      .to raise_error(Providers::LLM::Base::Error, /429/)
+  end
+end
+
+RSpec.describe Providers::Image::PollinationsAdapter do
+  subject(:adapter) { described_class.new }
+
+  it "fetches an image with no API key" do
+    jpeg = File.binread(Rails.root.join("spec/fixtures/files/sample.png")) # bytes are opaque here
+    stub_request(:get, %r{image\.pollinations\.ai/prompt/})
+      .to_return(status: 200, headers: { "Content-Type" => "image/jpeg" }, body: jpeg)
+
+    result = adapter.generate(prompt: "a red fox in snow", aspect_ratio: "16:9")
+
+    expect(result.provider).to eq("pollinations")
+    expect(result.content_type).to eq("image/jpeg")
+    expect(result.cost_usd).to eq(0.0)
+  end
+
+  it "raises when the response is not an image" do
+    stub_request(:get, %r{image\.pollinations\.ai}).to_return(
+      status: 200, headers: { "Content-Type" => "text/plain" }, body: "queue full"
+    )
+    expect { adapter.generate(prompt: "x") }.to raise_error(Providers::Image::Base::Error, /text/)
+  end
+end
+
 RSpec.describe Providers::Image::CloudflareAdapter do
   subject(:adapter) { described_class.new(account_id: "acc", api_token: "tok") }
 
@@ -93,13 +146,19 @@ end
 RSpec.describe Providers do
   around { |ex| described_class.reset!; ex.run; described_class.reset! }
 
-  it "auto-selects gemini for LLM when only GEMINI_API_KEY is set" do
+  it "auto-selects groq for LLM when GROQ_API_KEY is set" do
     allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with("LLM_PROVIDER").and_return(nil)
-    allow(ENV).to receive(:[]).with("ANTHROPIC_API_KEY").and_return(nil)
-    allow(ENV).to receive(:[]).with("GEMINI_API_KEY").and_return("k")
+    allow(ENV).to receive(:[]).with("GROQ_API_KEY").and_return("gsk_x")
 
-    expect(described_class.build_llm).to be_a(Providers::LLM::GeminiAdapter)
+    expect(described_class.build_llm).to be_a(Providers::LLM::GroqAdapter)
+  end
+
+  it "selects pollinations for images when asked" do
+    allow(ENV).to receive(:[]).and_call_original
+    allow(ENV).to receive(:[]).with("IMAGE_PROVIDER").and_return("pollinations")
+
+    expect(described_class.build_image).to be_a(Providers::Image::PollinationsAdapter)
   end
 
   it "auto-selects cloudflare for images when CLOUDFLARE_API_TOKEN is set" do

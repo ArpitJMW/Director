@@ -38,11 +38,13 @@ module Providers
 
   def build_llm
     provider = ENV["LLM_PROVIDER"].presence
+    provider ||= "groq" if ENV["GROQ_API_KEY"].present?
     provider ||= "anthropic" if ENV["ANTHROPIC_API_KEY"].present?
     provider ||= "gemini" if ENV["GEMINI_API_KEY"].present?
     provider ||= "fake"
 
     case provider
+    when "groq" then LLM::GroqAdapter.new
     when "anthropic" then LLM::AnthropicAdapter.new
     when "gemini" then LLM::GeminiAdapter.new
     when "fake" then LLM::FakeAdapter.new
@@ -53,12 +55,13 @@ module Providers
   def build_image
     provider = ENV["IMAGE_PROVIDER"].presence
     provider ||= "cloudflare" if ENV["CLOUDFLARE_API_TOKEN"].present?
-    provider ||= "gemini" if ENV["GEMINI_API_KEY"].present?
+    provider ||= "gemini" if ENV["GEMINI_API_KEY"].present? && ENV["GEMINI_IMAGE_ENABLED"].present?
     provider ||= "fake"
 
     case provider
     when "gemini" then Image::GeminiAdapter.new
     when "cloudflare" then Image::CloudflareAdapter.new
+    when "pollinations" then Image::PollinationsAdapter.new
     when "fake" then Image::FakeImageAdapter.new
     else raise ArgumentError, "unknown IMAGE_PROVIDER: #{provider.inspect}"
     end
