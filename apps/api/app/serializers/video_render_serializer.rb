@@ -10,7 +10,7 @@ class VideoRenderSerializer < ApplicationSerializer
       height: record.height,
       fps: record.fps,
       duration_seconds: record.duration_seconds&.to_f,
-      output_url: record.output_asset&.storage_url,
+      output_url: record.output_asset&.signed_url,
       render_seconds: record.render_seconds&.to_f,
       cost_usd: record.cost_usd.to_f,
       failure_reason: record.failure_reason,

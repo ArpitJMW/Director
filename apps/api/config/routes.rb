@@ -36,6 +36,7 @@ Rails.application.routes.draw do
         member do
           post "pipeline/start",         to: "pipeline#pipeline_start"
           post "pipeline/continue",      to: "pipeline#pipeline_continue"
+          post "pipeline/revise",        to: "pipeline#pipeline_revise"
           get  :preflight,               to: "preflight_reports#show"
           post "preflight/generate",     to: "pipeline#generate_preflight"
           post "preflight/acknowledge",  to: "pipeline#acknowledge_preflight"

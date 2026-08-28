@@ -29,11 +29,20 @@ export interface User {
   created_at: string;
 }
 
+export type PipelineCheckpoint = "storyboard" | "review";
+
+export interface PipelineState {
+  mode: "auto" | "manual";
+  checkpoint: PipelineCheckpoint | null;
+  active_stage: GenerationStage | null;
+}
+
 export interface Project {
   id: string;
   title: string;
   topic: string | null;
   status: ProjectStatus;
+  pipeline: PipelineState;
   format: ProjectFormat;
   aspect_ratio: AspectRatio;
   niche: string | null;

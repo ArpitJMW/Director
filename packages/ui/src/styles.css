@@ -62,3 +62,9 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-danger: var(--danger);
 }
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

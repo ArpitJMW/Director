@@ -31,6 +31,16 @@ module Api
         render json: { project: ProjectSerializer.call(project.reload) }, status: :accepted
       end
 
+      # POST /api/v1/projects/:id/pipeline/revise  (go back to storyboard editing)
+      def pipeline_revise
+        project = project_scope
+        authorize project, :generate?
+        return render_invalid_state(project, "Generate a storyboard first.") unless project.scenes.exists?
+
+        Generation::PipelineOrchestrator.revise(project)
+        render json: { project: ProjectSerializer.call(project.reload) }, status: :accepted
+      end
+
       def generate_script
         start_stage("script", allowed: -> { _1.script_generating? || _1.may_start_script? })
       end

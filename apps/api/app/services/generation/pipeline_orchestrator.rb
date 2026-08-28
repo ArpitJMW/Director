@@ -21,21 +21,41 @@ module Generation
 
     def stage_names = STAGES.map(&:first)
 
-    # Begin an auto run from the first stage.
+    # Begin (or resume) an auto run — picks up wherever the project already is
+    # so re-running doesn't throw away existing work.
     def start(project)
       project.update!(pipeline_mode: "auto", pipeline_checkpoint: nil, failure_reason: nil)
-      enqueue(project, "script")
+
+      if project.scenes.exists?
+        project.update!(pipeline_checkpoint: "storyboard")
+        nil
+      elsif project.current_script.present?
+        enqueue(project, "storyboard")
+      else
+        enqueue(project, "script")
+      end
     end
 
-    # Resume after a checkpoint the user has approved.
+    # Resume after a checkpoint the user has approved. At the final ("review")
+    # checkpoint there is nothing left to run — the project is done.
     def continue(project)
       checkpoint = project.pipeline_checkpoint
       return false unless checkpoint
 
       project.update!(pipeline_checkpoint: nil)
       nxt = stage_after(CHECKPOINT_STAGE.fetch(checkpoint))
-      enqueue(project, nxt) if nxt
+      if nxt
+        enqueue(project, nxt)
+      else
+        project.complete! if project.may_complete?
+      end
       true
+    end
+
+    # Send a finished/paused project back to the storyboard checkpoint so the
+    # user can edit scenes and re-run the back half.
+    def revise(project)
+      project.update!(pipeline_mode: "auto", pipeline_checkpoint: "storyboard", failure_reason: nil)
     end
 
     # Called by BaseJob after a stage succeeds.

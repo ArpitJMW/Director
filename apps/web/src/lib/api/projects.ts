@@ -35,11 +35,12 @@ export function useProject(id: string, options?: Partial<UseQueryOptions<Project
   });
 }
 
-export function useProjectScenes(id: string) {
+export function useProjectScenes(id: string, { poll = false }: { poll?: boolean } = {}) {
   return useQuery({
     queryKey: projectKeys.scenes(id),
     queryFn: () =>
       apiFetch<{ scenes: SceneResource[] }>(`/projects/${id}/scenes`).then((r) => r.scenes),
+    refetchInterval: poll ? 2000 : false,
   });
 }
 

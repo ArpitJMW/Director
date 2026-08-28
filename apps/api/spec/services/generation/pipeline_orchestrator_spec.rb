@@ -31,6 +31,31 @@ RSpec.describe Generation::PipelineOrchestrator do
     it "continue() is a no-op when not at a checkpoint" do
       expect(described_class.continue(project)).to be(false)
     end
+
+    it "continue() at the review checkpoint completes the project" do
+      described_class.start(project)
+      described_class.continue(project.reload) # -> review
+      described_class.continue(project.reload) # -> done
+
+      expect(project.reload).to be_completed
+      expect(project.pipeline_checkpoint).to be_nil
+    end
+
+    it "revise() sends a project back to the storyboard checkpoint" do
+      described_class.start(project)
+      described_class.continue(project.reload)
+      described_class.revise(project.reload)
+
+      expect(project.reload.pipeline_checkpoint).to eq("storyboard")
+    end
+  end
+
+  describe "start() resumes existing work" do
+    it "jumps straight to the storyboard checkpoint when scenes already exist" do
+      project = project_with_storyboard
+      described_class.start(project)
+      expect(project.reload.pipeline_checkpoint).to eq("storyboard")
+    end
   end
 
   describe "manual mode" do

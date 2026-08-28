@@ -2,291 +2,232 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@clipify/ui";
-import { useProject, useProjectScenes, projectKeys } from "@/lib/api/projects";
+import { Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@clipify/ui";
+import { useProject, useProjectScenes } from "@/lib/api/projects";
 import {
-  useGenerateAssets,
-  useGenerateScript,
-  useGenerateStoryboard,
-  useGenerateVoice,
+  useContinuePipeline,
   useProjectJobs,
-  useRegenerateSceneAsset,
   useRenderVideo,
+  useRevisePipeline,
+  useStartPipeline,
 } from "@/lib/api/pipeline";
 import { useProjectRenders } from "@/lib/api/renders";
 import { ProjectStatusBadge } from "@/components/project-status-badge";
-import { PipelineProgress } from "@/components/pipeline-progress";
+import { GenerationStepper } from "@/components/generation-stepper";
+import { SceneCard } from "@/components/scene-card";
 import { PreflightCard } from "@/components/preflight-card";
+
+const STAGE_LABEL: Record<string, string> = {
+  script: "Script",
+  storyboard: "Storyboard",
+  assets: "Visuals",
+  voice: "Voice & captions",
+  preflight: "Preflight",
+  render: "Render",
+};
 
 export default function ProjectPage() {
   const { id } = useParams<{ id: string }>();
-  const qc = useQueryClient();
-  const { data: project, isLoading, isError, error } = useProject(id);
-  const { data: scenes } = useProjectScenes(id);
-  const { data: jobs } = useProjectJobs(id);
-  const generateScript = useGenerateScript(id);
-  const generateStoryboard = useGenerateStoryboard(id);
-  const generateAssets = useGenerateAssets(id);
-  const generateVoice = useGenerateVoice(id);
-  const renderVideo = useRenderVideo(id);
-  const regenerateSceneAsset = useRegenerateSceneAsset(id);
+
+  const { data: jobs = [] } = useProjectJobs(id);
+  const anyJobActive = jobs.some((j) => j.active);
+
+  const { data: project, isLoading, isError, error } = useProject(id, {
+    refetchInterval: anyJobActive ? 1500 : false,
+  });
+  const { data: scenes = [] } = useProjectScenes(id, { poll: anyJobActive });
+
+  const start = useStartPipeline(id);
+  const cont = useContinuePipeline(id);
+  const revise = useRevisePipeline(id);
+  const render = useRenderVideo(id);
   const { data: renders } = useProjectRenders(id);
-  const latestRender = renders?.[0];
-  const renderRunning =
-    Boolean(latestRender && ["queued", "rendering", "uploading"].includes(latestRender.status)) ||
-    (jobs?.some((j) => j.stage === "render" && j.active) ?? false);
-
-  const scriptJob = jobs?.find((j) => j.stage === "script");
-  const storyboardJob = jobs?.find((j) => j.stage === "storyboard");
-  const assetsJob = jobs?.find((j) => j.stage === "assets" && !j.scene_id);
-  const voiceJob = jobs?.find((j) => j.stage === "voice");
-  const scriptRunning = Boolean(scriptJob?.active);
-  const storyboardRunning = Boolean(storyboardJob?.active);
-  const assetsRunning = jobs?.some((j) => j.stage === "assets" && j.active) ?? false;
-  const voiceRunning = Boolean(voiceJob?.active);
-  const anyRunning = scriptRunning || storyboardRunning || assetsRunning || voiceRunning;
-
-  // When a job finishes, refresh the project + scenes.
-  const wasRunning = useRef(false);
-  useEffect(() => {
-    if (wasRunning.current && !anyRunning) {
-      qc.invalidateQueries({ queryKey: projectKeys.detail(id) });
-      qc.invalidateQueries({ queryKey: projectKeys.scenes(id) });
-    }
-    wasRunning.current = anyRunning;
-  }, [anyRunning, id, qc]);
 
   if (isLoading) return <p className="text-sm text-muted">Loading…</p>;
   if (isError) return <p className="text-sm text-danger">{(error as Error).message}</p>;
   if (!project) return null;
 
   const script = project.current_script;
+  const checkpoint = project.pipeline.checkpoint;
+  const isAuto = project.pipeline.mode === "auto";
+  const started = isAuto || Boolean(script) || scenes.length > 0;
+  const running = Boolean(project.pipeline.active_stage) || anyJobActive;
+  const failedStage = jobs.find((j) => j.status === "failed" && !j.scene_id)?.stage;
+  const latestRender = renders?.[0];
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="flex items-start justify-between">
         <div>
           <Link href="/dashboard" className="text-sm text-muted hover:text-foreground">
             ← Projects
           </Link>
           <h1 className="mt-1 text-2xl font-semibold">{project.title}</h1>
-          {project.topic && <p className="mt-1 max-w-2xl text-sm text-muted">{project.topic}</p>}
+          {project.topic && (
+            <p className="mt-1 max-w-2xl text-sm text-muted line-clamp-2">{project.topic}</p>
+          )}
         </div>
         <ProjectStatusBadge status={project.status} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pipeline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PipelineProgress status={project.status} />
-          <div className="mt-4 flex items-center gap-3">
-            <Button
-              size="sm"
-              disabled={scriptRunning || generateScript.isPending}
-              onClick={() => generateScript.mutate()}
-            >
-              {scriptRunning
-                ? "Generating…"
-                : script
-                  ? "Regenerate script"
-                  : "Generate script"}
-            </Button>
-            {scriptJob?.status === "failed" && (
-              <span className="text-xs text-danger">
-                Failed: {scriptJob.failure_reason ?? "unknown error"}
-              </span>
-            )}
-            {generateScript.isError && (
-              <span className="text-xs text-danger">
-                {(generateScript.error as Error).message}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {script && (
+      {/* --- Not started: one button --- */}
+      {!started && (
         <Card>
-          <CardHeader>
-            <CardTitle>Script</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 text-sm">
-            <div>
-              <span className="text-muted">Title</span>
-              <p className="font-medium">{script.selected_title}</p>
-            </div>
-            {script.hook && (
-              <div>
-                <span className="text-muted">Hook</span>
-                <p>{script.hook}</p>
-              </div>
-            )}
-            {script.story_angle && (
-              <div>
-                <span className="text-muted">Angle</span>
-                <p>{script.story_angle}</p>
-              </div>
-            )}
-            <div>
-              <span className="text-muted">
-                Narration · ~{script.estimated_duration_seconds ?? "?"}s · v{script.version}
-              </span>
-              <p className="mt-1 whitespace-pre-wrap">{script.full_narration}</p>
-            </div>
+          <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+            <p className="max-w-md text-sm text-muted">
+              Clipify will write the script, plan the storyboard, generate the visuals, and
+              pause for your review before narration and rendering.
+            </p>
+            <Button
+              size="lg"
+              disabled={start.isPending}
+              onClick={() => start.mutate()}
+            >
+              {start.isPending ? "Starting…" : "Start generation"}
+            </Button>
           </CardContent>
         </Card>
       )}
 
-      {Boolean(scenes?.length) && <PreflightCard projectId={id} />}
-
-      {Boolean(scenes?.length) && (
+      {/* --- Progress stepper --- */}
+      {started && (
         <Card>
-          <CardHeader>
-            <CardTitle>Render</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                size="sm"
-                disabled={renderRunning || renderVideo.isPending}
-                onClick={() => renderVideo.mutate()}
-              >
-                {renderRunning
-                  ? "Rendering…"
-                  : latestRender?.status === "completed"
-                    ? "Re-render"
-                    : "Render video"}
+          <CardContent className="pt-5">
+            <GenerationStepper project={project} jobs={jobs} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* --- Failure banner --- */}
+      {project.status === "failed" && (
+        <Card className="border-danger/50">
+          <CardContent className="flex flex-col gap-3 py-4">
+            <p className="text-sm">
+              The <span className="font-medium">{STAGE_LABEL[failedStage ?? ""] ?? "pipeline"}</span>{" "}
+              stage failed
+              {project.failure_reason ? `: ${project.failure_reason}` : "."}
+            </p>
+            <div>
+              <Button size="sm" disabled={start.isPending} onClick={() => start.mutate()}>
+                Retry from here
               </Button>
-              {latestRender && (
-                <span className="text-xs text-muted">
-                  v{latestRender.version} · {latestRender.status}
-                  {latestRender.status === "rendering" && ` · ${latestRender.progress}%`}
-                </span>
-              )}
-              {latestRender?.status === "failed" && (
-                <span className="text-xs text-danger">
-                  {latestRender.failure_reason ?? "render failed"}
-                </span>
-              )}
             </div>
-            {latestRender?.status === "completed" && latestRender.output_url && (
-              <video
-                controls
-                src={latestRender.output_url}
-                className="w-full max-w-xl rounded border border-border"
-              />
-            )}
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Storyboard</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Button
-              size="sm"
-              disabled={!script || storyboardRunning || generateStoryboard.isPending}
-              onClick={() => generateStoryboard.mutate()}
-            >
-              {storyboardRunning
-                ? "Planning…"
-                : scenes?.length
-                  ? "Regenerate storyboard"
-                  : "Generate storyboard"}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!scenes?.length || assetsRunning || generateAssets.isPending}
-              onClick={() => generateAssets.mutate()}
-            >
-              {assetsRunning ? "Generating images…" : "Generate images"}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!scenes?.length || voiceRunning || generateVoice.isPending}
-              onClick={() => generateVoice.mutate()}
-            >
-              {voiceRunning ? "Narrating…" : "Generate narration"}
-            </Button>
-            {!script && (
-              <span className="text-xs text-muted">Generate a script first.</span>
+      {/* --- Script summary --- */}
+      {script && (
+        <details className="group rounded-lg border border-border bg-surface-1" open={scenes.length === 0}>
+          <summary className="cursor-pointer list-none p-4 text-sm font-semibold">
+            Script — {script.selected_title}
+            <span className="ml-2 font-normal text-muted">
+              ~{script.estimated_duration_seconds ?? "?"}s · v{script.version}
+            </span>
+          </summary>
+          <div className="flex flex-col gap-3 p-4 pt-0 text-sm">
+            {script.hook && (
+              <p>
+                <span className="text-muted">Hook: </span>
+                {script.hook}
+              </p>
             )}
-            {storyboardJob?.status === "failed" && (
-              <span className="text-xs text-danger">
-                Failed: {storyboardJob.failure_reason ?? "unknown error"}
-              </span>
-            )}
-            {assetsJob?.status === "failed" && (
-              <span className="text-xs text-danger">
-                Image generation failed: {assetsJob.failure_reason ?? "unknown error"}
-              </span>
-            )}
+            <p className="whitespace-pre-wrap text-muted">{script.full_narration}</p>
           </div>
-          {!scenes?.length && !storyboardRunning && (
-            <p className="text-sm text-muted">No scenes yet.</p>
-          )}
-          <ol className="flex flex-col gap-3">
-            {scenes?.map((s) => (
-              <li key={s.id} className="flex gap-3 rounded-md border border-border p-3">
-                {s.selected_asset?.url ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={s.selected_asset.url}
-                    alt={s.scene.caption ?? s.scene.id}
-                    className="h-20 w-32 shrink-0 rounded object-cover"
-                  />
-                ) : (
-                  <div className="flex h-20 w-32 shrink-0 items-center justify-center rounded bg-surface-2 text-xs text-muted">
-                    {s.status === "generating_asset" ? "…" : "no image"}
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {s.scene.id} · {s.scene.visual_type.replace(/_/g, " ")}
-                    </span>
-                    <span className="text-xs text-muted">{s.scene.duration}s</span>
-                  </div>
-                  {s.scene.narration && (
-                    <p className="mt-1 line-clamp-2 text-sm text-muted">{s.scene.narration}</p>
-                  )}
-                  <div className="mt-1 flex items-center gap-3 text-xs">
-                    {s.selected_asset && (
-                      <button
-                        type="button"
-                        className="text-accent disabled:opacity-50"
-                        disabled={assetsRunning}
-                        onClick={() => regenerateSceneAsset.mutate(s.id)}
-                      >
-                        Regenerate image
-                      </button>
-                    )}
-                    {s.narration_audio?.url && (
-                      <audio
-                        controls
-                        src={s.narration_audio.url}
-                        className="h-7 max-w-[220px]"
-                      />
-                    )}
-                    {s.captions.length > 0 && (
-                      <span className="text-muted">{s.captions.length} caption cues</span>
-                    )}
-                  </div>
-                </div>
-              </li>
+        </details>
+      )}
+
+      {/* --- Storyboard grid --- */}
+      {scenes.length > 0 && (
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Storyboard</h2>
+            <span className="text-xs text-muted">{scenes.length} scenes</span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {scenes.map((scene) => (
+              <SceneCard
+                key={scene.id}
+                scene={scene}
+                projectId={id}
+                editable={checkpoint === "storyboard"}
+              />
             ))}
-          </ol>
-        </CardContent>
-      </Card>
+          </div>
+
+          {checkpoint === "storyboard" && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-1 p-4">
+              <p className="flex-1 text-sm text-muted">
+                Review the storyboard — regenerate or edit any scene. When it looks right,
+                continue to narration and rendering.
+              </p>
+              <Button disabled={cont.isPending} onClick={() => cont.mutate()}>
+                {cont.isPending ? "Continuing…" : "Looks good — continue"}
+              </Button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* --- Review checkpoint: preflight + video --- */}
+      {checkpoint === "review" && (
+        <>
+          <PreflightCard projectId={id} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Your video</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {latestRender?.status === "completed" && latestRender.output_url ? (
+                <>
+                  <video
+                    controls
+                    src={latestRender.output_url}
+                    className="w-full rounded border border-border"
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <a href={latestRender.output_url} download>
+                      <Button size="sm">Download MP4</Button>
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => revise.mutate()}
+                      disabled={revise.isPending}
+                    >
+                      Edit storyboard
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => render.mutate()}
+                      disabled={render.isPending || running}
+                    >
+                      Re-render
+                    </Button>
+                  </div>
+                </>
+              ) : latestRender?.status === "failed" ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-danger">
+                    {latestRender.failure_reason ?? "Render failed."}
+                  </p>
+                  <Button size="sm" onClick={() => render.mutate()} disabled={render.isPending}>
+                    Retry render
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-muted">Rendering your video…</p>
+                  <Progress value={latestRender?.progress ?? 5} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -92,7 +92,7 @@ class Project < ApplicationRecord
     end
 
     event :complete do
-      transitions from: :quality_check, to: :completed
+      transitions from: [ :rendering, :quality_check ], to: :completed
       after { update_column(:completed_at, Time.current) }
     end
 
