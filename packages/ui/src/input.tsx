@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { cn } from "./cn";
 
 const fieldClasses =
@@ -17,3 +17,15 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   ),
 );
 Textarea.displayName = "Textarea";
+
+/** Plain native <select>, styled to match Input/Textarea (Phase 1 Task 3 —
+ *  the Director panel needs several of these per scene/shot; a shared
+ *  primitive beats repeating the field classes at every call site). */
+export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
+  ({ className, children, ...props }, ref) => (
+    <select ref={ref} className={cn(fieldClasses, "h-9", className)} {...props}>
+      {children}
+    </select>
+  ),
+);
+Select.displayName = "Select";

@@ -8,9 +8,11 @@ class Asset < ApplicationRecord
 
   belongs_to :project
   belongs_to :scene, optional: true
+  belongs_to :shot, optional: true
   belongs_to :ai_generation, optional: true
 
   has_many :selected_by_scenes, class_name: "Scene", foreign_key: :selected_asset_id, dependent: :nullify, inverse_of: :selected_asset
+  has_many :selected_by_shots, class_name: "Shot", foreign_key: :selected_asset_id, dependent: :nullify, inverse_of: :selected_asset
 
   validates :asset_type, inclusion: { in: ASSET_TYPES }
   validates :source_type, inclusion: { in: SOURCE_TYPES }

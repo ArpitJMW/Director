@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_120002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -37,6 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
     t.jsonb "response", default: {}, null: false
     t.integer "retry_count", default: 0, null: false
     t.bigint "scene_id"
+    t.bigint "shot_id"
     t.datetime "started_at"
     t.string "status", default: "pending", null: false
     t.integer "total_tokens"
@@ -46,6 +47,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
     t.index ["provider_request_id"], name: "index_ai_generations_on_provider_request_id"
     t.index ["public_id"], name: "index_ai_generations_on_public_id", unique: true
     t.index ["scene_id"], name: "index_ai_generations_on_scene_id"
+    t.index ["shot_id"], name: "index_ai_generations_on_shot_id"
   end
 
   create_table "assets", force: :cascade do |t|
@@ -73,6 +75,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
     t.boolean "represents_real_person", default: false, null: false
     t.boolean "requires_disclosure", default: false, null: false
     t.bigint "scene_id"
+    t.bigint "shot_id"
     t.string "source_type", default: "ai_generated", null: false
     t.string "storage_key"
     t.string "storage_url"
@@ -83,6 +86,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
     t.index ["project_id"], name: "index_assets_on_project_id"
     t.index ["public_id"], name: "index_assets_on_public_id", unique: true
     t.index ["scene_id"], name: "index_assets_on_scene_id"
+    t.index ["shot_id"], name: "index_assets_on_shot_id"
   end
 
   create_table "generation_jobs", force: :cascade do |t|
@@ -220,19 +224,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
   end
 
   create_table "scenes", force: :cascade do |t|
+    t.text "action"
     t.string "animation", default: "ken_burns", null: false
+    t.string "asset_strategy", default: "image", null: false
     t.decimal "background_music_level", precision: 4, scale: 2, default: "0.15", null: false
+    t.jsonb "camera", default: {}, null: false
     t.text "caption"
+    t.jsonb "character_ids", default: [], null: false
+    t.string "content_type"
     t.datetime "created_at", null: false
     t.decimal "duration_seconds", precision: 6, scale: 2, default: "5.0", null: false
+    t.bigint "environment_id"
     t.text "failure_reason"
     t.string "key", null: false
     t.jsonb "metadata", default: {}, null: false
+    t.string "mood"
+    t.jsonb "motion", default: {}, null: false
     t.text "narration"
+    t.text "negative_prompt"
     t.text "notes"
     t.integer "position", null: false
     t.bigint "project_id", null: false
     t.string "public_id", null: false
+    t.text "purpose"
     t.bigint "script_id"
     t.bigint "selected_asset_id"
     t.string "status", default: "pending", null: false
@@ -272,6 +286,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
     t.index ["project_id", "version"], name: "index_scripts_on_project_id_and_version", unique: true
     t.index ["project_id"], name: "index_scripts_on_project_id"
     t.index ["public_id"], name: "index_scripts_on_public_id", unique: true
+  end
+
+  create_table "shots", force: :cascade do |t|
+    t.text "action"
+    t.string "asset_strategy", default: "image", null: false
+    t.string "camera_movement"
+    t.string "content_type"
+    t.datetime "created_at", null: false
+    t.decimal "duration_seconds", precision: 6, scale: 2, default: "4.0", null: false
+    t.text "failure_reason"
+    t.string "framing"
+    t.string "key", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.jsonb "motion", default: {}, null: false
+    t.text "negative_prompt"
+    t.integer "position", null: false
+    t.string "public_id", null: false
+    t.bigint "scene_id", null: false
+    t.bigint "selected_asset_id"
+    t.string "shot_type", default: "static", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.text "visual_prompt"
+    t.string "visual_type", default: "image", null: false
+    t.index ["public_id"], name: "index_shots_on_public_id", unique: true
+    t.index ["scene_id", "key"], name: "index_shots_on_scene_id_and_key", unique: true
+    t.index ["scene_id", "position"], name: "index_shots_on_scene_id_and_position", unique: true
+    t.index ["scene_id"], name: "index_shots_on_scene_id"
+    t.index ["selected_asset_id"], name: "index_shots_on_selected_asset_id"
   end
 
   create_table "sources", force: :cascade do |t|
@@ -403,9 +446,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
 
   add_foreign_key "ai_generations", "projects"
   add_foreign_key "ai_generations", "scenes"
+  add_foreign_key "ai_generations", "shots"
   add_foreign_key "assets", "ai_generations", on_delete: :nullify
   add_foreign_key "assets", "projects"
   add_foreign_key "assets", "scenes"
+  add_foreign_key "assets", "shots"
   add_foreign_key "generation_jobs", "generation_jobs", column: "parent_job_id"
   add_foreign_key "generation_jobs", "projects"
   add_foreign_key "generation_jobs", "scenes"
@@ -427,6 +472,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_100001) do
   add_foreign_key "scenes", "scripts"
   add_foreign_key "scripts", "ai_generations", on_delete: :nullify
   add_foreign_key "scripts", "projects"
+  add_foreign_key "shots", "assets", column: "selected_asset_id"
+  add_foreign_key "shots", "scenes"
   add_foreign_key "sources", "projects"
   add_foreign_key "template_versions", "templates"
   add_foreign_key "templates", "assets", column: "preview_asset_id", on_delete: :nullify

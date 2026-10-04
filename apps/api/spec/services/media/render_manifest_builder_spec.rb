@@ -48,4 +48,25 @@ RSpec.describe Media::RenderManifestBuilder do
     project.scenes.destroy_all
     expect { manifest }.to raise_error(described_class::Error, /no scenes/)
   end
+
+  describe "audio-fits-slot guard (Task 2.6)" do
+    it "does not warn when Media::SceneDurationService has already reconciled the scene (the normal case)" do
+      manifest
+
+      expect(project.generation_logs.where(level: "warn", stage: "render")).to be_empty
+    end
+
+    it "logs a warning if a scene's measured audio somehow still exceeds its slot" do
+      scene = project.scenes.first
+      # Simulate a scene that skipped reconciliation (e.g. a stale record from
+      # before Task 2.6): shrink its slot back below its own voice's measured length.
+      scene.update!(duration_seconds: [ scene.current_voice_generation.duration_seconds.to_f / 2.0, 0.1 ].max)
+
+      manifest
+
+      log = project.generation_logs.where(level: "warn", stage: "render", scene_id: scene.id).last
+      expect(log).to be_present
+      expect(log.message).to include(scene.key).and include("exceeds")
+    end
+  end
 end

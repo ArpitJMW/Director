@@ -11,6 +11,7 @@ module Generation
       [ "storyboard", StoryboardJob, :start_storyboard! ],
       [ "assets",     AssetsJob,     :start_assets! ],
       [ "voice",      VoiceJob,      :start_voice! ],
+      [ "quality_check", QualityCheckJob, nil ],
       [ "preflight",  PreflightJob,  nil ],
       [ "render",     RenderJob,     :start_render! ]
     ].freeze
@@ -56,6 +57,29 @@ module Generation
     # user can edit scenes and re-run the back half.
     def revise(project)
       project.update!(pipeline_mode: "auto", pipeline_checkpoint: "storyboard", failure_reason: nil)
+    end
+
+    # Halt an in-flight run. Cancels queued/running stage jobs (a job already in
+    # Sidekiq no-ops on pickup — BaseJob checks #cancelled?) and parks the
+    # project. Generated work so far is kept.
+    def stop(project)
+      project.generation_jobs.active.find_each { |job| job.cancel! if job.may_cancel? }
+      project.update!(pipeline_mode: "manual", pipeline_checkpoint: nil)
+      project.cancel! if project.may_cancel?
+      project
+    end
+
+    # Stop, throw away everything generated, and run the whole pipeline again
+    # from the top with the same project inputs (topic / style / template).
+    def restart(project)
+      stop(project)
+      project.reset_to_draft! if project.may_reset_to_draft?
+      project.scenes.destroy_all
+      project.scripts.destroy_all
+      project.video_renders.destroy_all
+      project.preflight_reports.destroy_all
+      project.update!(failure_reason: nil, failed_from_status: nil, cancelled_at: nil)
+      start(project)
     end
 
     # Called by BaseJob after a stage succeeds.

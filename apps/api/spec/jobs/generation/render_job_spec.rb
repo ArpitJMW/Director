@@ -42,4 +42,30 @@ RSpec.describe Generation::RenderJob do
     expect { described_class.new.perform(gen_job.id) }.to raise_error(/chrome missing/)
     expect(project.video_renders.last.status).to eq("failed")
   end
+
+  describe "render safety for scenes with no audio (Phase 1 Task 2.4)" do
+    it "warns clearly but still renders — never blocks — when a narrated scene has no audio" do
+      silent_scene = project.scenes.first
+      silent_scene.current_voice_generation.audio_asset&.destroy
+      silent_scene.current_voice_generation.destroy
+
+      described_class.new.perform(gen_job.id)
+
+      gen_job.reload
+      expect(gen_job).to be_succeeded # not blocked
+
+      render = project.video_renders.last
+      expect(render.status).to eq("completed")
+      expect(render.log).to include(silent_scene.key).and include("no audio")
+      expect(project.generation_logs.where(level: "warn", stage: "render")).to be_present
+    end
+
+    it "leaves the render log blank when every narrated scene has audio" do
+      described_class.new.perform(gen_job.id)
+
+      render = project.video_renders.last
+      expect(render.log).to be_blank
+      expect(project.generation_logs.where(level: "warn", stage: "render")).to be_empty
+    end
+  end
 end

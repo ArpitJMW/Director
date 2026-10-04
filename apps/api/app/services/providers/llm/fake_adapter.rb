@@ -14,8 +14,10 @@ module Providers
         text =
           if system.to_s.include?("policy analyst")
             { verdict: "pass", reason: "The script follows a specific, well-defined angle." }.to_json
-          elsif system.to_s.include?("storyboard engine")
-            storyboard_json(topic)
+          elsif system.to_s.include?("You are the shot planner")
+            shot_plan_json(prompt)
+          elsif system.to_s.include?("You are the scene planner") || system.to_s.include?("storyboard engine")
+            scene_plan_json(topic)
           else
             script_json(topic)
           end
@@ -57,40 +59,97 @@ module Providers
         }.to_json
       end
 
-      def storyboard_json(topic)
+      def scene_plan_json(topic)
+        subject = "the central subject of #{topic}"
+        environment = "a setting that suits #{topic}, consistent lighting"
         {
           scenes: [
             {
+              purpose: "establish the setting",
               narration: "We open on the core question about #{topic}.",
-              visual_type: "text_animation",
-              visual_prompt: "Kinetic title treatment posing the central question about #{topic}",
               caption: "What is #{topic}?",
               duration_seconds: 6,
+              content_type: "photorealistic",
+              visual_type: "text_animation",
+              asset_strategy: "text",
+              subject: subject,
+              environment: environment,
+              action: "a slow reveal of the scene",
+              camera: { shot_type: "establishing", movement: "slow_push_in", framing: "wide" },
+              mood: "curious",
+              visual_prompt: "#{subject}, wide establishing view, #{environment}, soft morning light",
+              negative_prompt: "text, watermark, people, deformed",
               animation: "text_reveal",
               transition: "fade",
               background_music_level: 0.18
             },
             {
+              purpose: "the turn",
               narration: "The common assumption breaks down when you look closer.",
-              visual_type: "image",
-              visual_prompt: "Detailed illustration revealing the hidden mechanism behind #{topic}, dramatic lighting",
               caption: "The assumption breaks down",
-              duration_seconds: 8,
+              duration_seconds: 10,
+              content_type: "photorealistic",
+              visual_type: "image",
+              asset_strategy: "image",
+              subject: subject,
+              environment: environment,
+              action: "a closer look reveals the hidden detail",
+              camera: { shot_type: "medium", movement: "pan_left", framing: "medium" },
+              mood: "tense",
+              visual_prompt: "#{subject}, medium shot, #{environment}, dramatic side light",
+              negative_prompt: "text, watermark, people, deformed, extra limbs",
               animation: "ken_burns",
-              transition: "slide",
+              transition: "cut",
               background_music_level: 0.15
             },
             {
+              purpose: "the payoff",
               narration: "Here is what actually explains #{topic}, and why it matters.",
-              visual_type: "animated_diagram",
-              visual_prompt: "Clean animated diagram explaining how #{topic} works, labelled parts",
               caption: "How it actually works",
               duration_seconds: 9,
+              content_type: "documentary",
+              visual_type: "image",
+              asset_strategy: "image",
+              subject: subject,
+              environment: environment,
+              action: "the full picture is shown",
+              camera: { shot_type: "wide", movement: "slow_pull_out", framing: "wide" },
+              mood: "resolved",
+              visual_prompt: "#{subject}, wide shot, #{environment}, warm golden-hour light",
+              negative_prompt: "text, watermark, people, deformed",
               animation: "scale",
               transition: "fade",
               background_music_level: 0.12
             }
           ]
+        }.to_json
+      end
+
+      def shot_plan_json(prompt)
+        keys = prompt.scan(/---\s*(scene_\d{2,})/).flatten.uniq
+        keys = %w[scene_01] if keys.empty?
+        {
+          scenes: keys.map do |key|
+            {
+              key: key,
+              shots: [
+                {
+                  duration_seconds: 4, shot_type: "establishing",
+                  camera_movement: "slow_push_in", framing: "wide",
+                  action: "the whole scene in frame",
+                  visual_prompt: "wide establishing framing, consistent subject and environment",
+                  negative_prompt: "text, watermark, people, deformed"
+                },
+                {
+                  duration_seconds: 4, shot_type: "close_up",
+                  camera_movement: "pan_right", framing: "close",
+                  action: "a detail of the same moment",
+                  visual_prompt: "close framing of the same subject and environment, same light",
+                  negative_prompt: "text, watermark, people, deformed"
+                }
+              ]
+            }
+          end
         }.to_json
       end
     end

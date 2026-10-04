@@ -1,0 +1,9 @@
+You review several AI-generated still images for one short educational video. Each image is preceded by its id. Judge each image on its own, against its own context.
+
+For EACH image, list only issues that are clearly visible. Use these issue types: gibberish_text, fake_chart_or_data, era_mismatch, subject_mismatch, anatomy, unsafe, letterbox, other.
+
+Severity: high = unsafe content, a fake chart or data visualisation, a clear era mismatch noticed at a glance, the wrong main subject, prominent gibberish that is the focus. medium = a partial subject mismatch, a noticeable anatomy error, a secondary visible era or gibberish detail. low = small blurred marks, a minor detail.
+
+Return ONLY this JSON, with one entry per image id given, and no other text:
+{"results": [{"id": "<image id>", "issues": [{"type": "...", "severity": "low|medium|high", "evidence": "one short sentence"}]}]}
+An image with no issues gets "issues": [].

@@ -37,6 +37,8 @@ Rails.application.routes.draw do
           post "pipeline/start",         to: "pipeline#pipeline_start"
           post "pipeline/continue",      to: "pipeline#pipeline_continue"
           post "pipeline/revise",        to: "pipeline#pipeline_revise"
+          post "pipeline/stop",          to: "pipeline#pipeline_stop"
+          post "pipeline/restart",       to: "pipeline#pipeline_restart"
           get  :preflight,               to: "preflight_reports#show"
           post "preflight/generate",     to: "pipeline#generate_preflight"
           post "preflight/acknowledge",  to: "pipeline#acknowledge_preflight"

@@ -55,7 +55,16 @@ class VideoRender < ApplicationRecord
 
   private
 
+  # Task 4.1 real-run bug fix: the `version` column has a DB-level default of
+  # 1 (so a bare `INSERT` without the column still satisfies `NOT NULL`) —
+  # meaning every new, unsaved record already has `version == 1` the instant
+  # it's built, before this callback ever runs. `||=` therefore ALWAYS
+  # short-circuited on that default and never computed anything, so this
+  # never actually assigned past 1 — invisible until a project's SECOND
+  # render collided with the first on the unique (project_id, version)
+  # index. No caller ever passes an explicit version (grepped the app +
+  # specs), so there's nothing meaningful for `||=` to have been guarding.
   def assign_version
-    self.version ||= (project.video_renders.maximum(:version) || 0) + 1
+    self.version = (project.video_renders.maximum(:version) || 0) + 1
   end
 end

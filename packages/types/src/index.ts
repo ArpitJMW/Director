@@ -3,7 +3,56 @@
  * `apps/api/app/serializers` and the documented API in `docs/api.md`.
  */
 
-import type { Scene as SceneContract } from "@clipify/video-schema";
+import type {
+  CAMERA_INTENSITIES,
+  CAMERA_MOTIONS,
+  OVERLAY_TYPES,
+  Overlay,
+  Scene as SceneContract,
+  Shot as ShotContract,
+  TEXT_STYLES,
+  TRANSITIONS,
+} from "@clipify/video-schema";
+
+export type { Overlay, TextSpec, Scene as SceneContract, Shot as ShotContract } from "@clipify/video-schema";
+export {
+  CAMERA_INTENSITIES,
+  CAMERA_MOTIONS,
+  OVERLAY_TYPES,
+  TEXT_STYLES,
+  TRANSITIONS,
+} from "@clipify/video-schema";
+
+/**
+ * Phase 1 Task 3 — the Director's per-unit choices, as the web app EDITS
+ * them. Read state for an existing unit comes back on `SceneContract`/
+ * `ShotContract` itself (camera/motion/transition/overlay/text_spec, from
+ * Task 4); this is the shape a PATCH body's `direction` key takes to change
+ * any of it. Every value must be a catalog member from packages/video-schema
+ * — the web app never hand-writes its own option list, and the API rejects
+ * (422) anything not in the same catalog.
+ */
+export interface DirectionInput {
+  camera_motion?: (typeof CAMERA_MOTIONS)[number];
+  camera_intensity?: (typeof CAMERA_INTENSITIES)[number];
+  /** Scene-level only — how this scene transitions in from the previous one. */
+  transition_in?: (typeof TRANSITIONS)[number];
+  /** Image units only. `{ type: "none" }` (or omitting overlay) clears it. */
+  overlay?: { type: (typeof OVERLAY_TYPES)[number]; text?: string | null; value?: string | null } | null;
+  /** Text units only. */
+  text_style?: (typeof TEXT_STYLES)[number];
+  items?: string[];
+  number?: number | string | null;
+  unit?: string | null;
+}
+
+/** One shot's editable fields (Phase 1 Task 3) — camera/overlay direction
+ *  only; a shot has no transition_in or text_style of its own (see the Task
+ *  4.2 shot_planner prompt: transitions/text are scene-level decisions). */
+export interface UpdateShotInput {
+  id: string;
+  direction?: Omit<DirectionInput, "transition_in" | "text_style" | "items" | "number" | "unit">;
+}
 
 export type ProjectStatus =
   | "draft"
@@ -66,6 +115,20 @@ export interface Project {
   disclosure: Record<string, unknown>;
   template_id: string | null;
   scene_count: number;
+  /** True when any scene/shot has a direction-only edit (Phase 1 Task 3)
+   *  made after the project's last completed render. */
+  pending_render_changes: boolean;
+  /** Task 6: project-level QA roll-up (single-project responses only). */
+  qa?: {
+    checked: boolean;
+    setting: boolean;
+    units?: number;
+    passed?: number;
+    failed?: number;
+    unavailable?: number;
+    repaired?: number;
+    issues?: number;
+  };
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -97,6 +160,14 @@ export interface CaptionCue {
   end: number;
 }
 
+/** Task 6: one unit's AI-QA result, rolled up from the scene and its shots. */
+export interface SceneQa {
+  status: "passed" | "failed" | "unavailable";
+  issues: { issue_type: string; severity: "low" | "medium" | "high" | "info"; evidence: string; source: string }[];
+  repaired: boolean;
+  repair_outcome: "repaired" | "failed" | "skipped_unit_limit" | "skipped_project_limit" | null;
+}
+
 export interface SceneResource {
   id: string;
   project_id: string;
@@ -112,6 +183,16 @@ export interface SceneResource {
     provider: string;
   } | null;
   captions: CaptionCue[];
+  /** Task 6: AI-QA result for this scene (null until the quality_check stage ran). */
+  qa: SceneQa | null;
+  /** True once this scene's asset_strategy/visual_prompt/etc changed enough
+   *  that the current asset (if any) no longer matches — needs the pipeline
+   *  to (re)generate it. A brand-new, never-generated scene is also true. */
+  needs_regeneration: boolean;
+  /** True when a direction-only edit (camera/transition/overlay/text_style)
+   *  happened after the project's last completed render — the existing
+   *  asset is still valid, but the video needs re-rendering to show it. */
+  needs_rerender: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -262,10 +343,25 @@ export interface UpdateSceneInput {
   visual_prompt?: string;
   caption?: string;
   animation?: SceneContract["animation"];
+  /** @deprecated prefer `direction.transition_in` — kept because the API
+   *  still accepts either; `direction.transition_in` wins if both are sent. */
   transition?: SceneContract["transition"];
   duration_seconds?: number;
   background_music_level?: number;
   notes?: string;
+  // --- Phase 1 Task 3 additions ---
+  /** "image" | "text" — the only two the studio can actually produce.
+   *  Changing this flags the scene (and its shots) for regeneration. */
+  asset_strategy?: "image" | "text";
+  purpose?: string;
+  action?: string;
+  mood?: string;
+  /** Direction-only edit — never triggers regeneration, only a re-render. */
+  direction?: DirectionInput;
+  /** Per-shot direction edits, nested under the scene update (Phase 1 Task 3
+   *  Step 2 — smallest reasonable extension; see the Task 3 report for why
+   *  this wasn't given its own shots#update route). */
+  shots?: UpdateShotInput[];
 }
 
 // --- API envelope ----------------------------------------------------------

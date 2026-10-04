@@ -7,9 +7,28 @@ module Providers
       SAMPLE_RATE = 22_050
       CHARS_PER_SECOND = 15.0
 
+      # Batch support is opt-in per instance (default false), NOT unconditional
+      # like the real Gemini adapter — this keeps every existing spec that
+      # builds a plain `FakeVoiceAdapter.new` on the per-scene path unchanged.
+      # Tests of Media::BatchVoiceGenerationService construct
+      # `FakeVoiceAdapter.new(supports_batch: true)` explicitly.
+      def initialize(supports_batch: false)
+        super()
+        @supports_batch = supports_batch
+      end
+
       def name = "fake"
       def default_model = "fake-voice-1"
       def default_voice_id = "fake-voice"
+      def supports_batch? = @supports_batch
+
+      # One #synthesize per text — the fake adapter's job is to give callers
+      # deterministic, offline Results to build Asset/VoiceGeneration rows
+      # from; the real batching-into-one-HTTP-call behaviour is
+      # Gemini-specific and is covered by GeminiTtsAdapter's own spec.
+      def synthesize_batch(texts:, voice_id: nil, model: nil)
+        texts.map { |text| synthesize(text: text, voice_id: voice_id, model: model) }
+      end
 
       def synthesize(text:, voice_id: nil, model: nil)
         chars = text.to_s.chars

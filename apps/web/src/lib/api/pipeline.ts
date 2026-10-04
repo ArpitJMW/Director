@@ -36,7 +36,10 @@ export function useStartPipeline(projectId: string) {
   });
 }
 
-function usePipelineAction(projectId: string, action: "continue" | "revise") {
+function usePipelineAction(
+  projectId: string,
+  action: "continue" | "revise" | "stop" | "restart",
+) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
@@ -52,6 +55,12 @@ export const useContinuePipeline = (id: string) => usePipelineAction(id, "contin
 
 /** Send a finished project back to the storyboard checkpoint for edits. */
 export const useRevisePipeline = (id: string) => usePipelineAction(id, "revise");
+
+/** Halt an in-flight generation run (keeps whatever was generated so far). */
+export const useStopPipeline = (id: string) => usePipelineAction(id, "stop");
+
+/** Discard everything and run the whole pipeline again from the top. */
+export const useRestartPipeline = (id: string) => usePipelineAction(id, "restart");
 
 function useStageMutation(projectId: string, stagePath: string) {
   const qc = useQueryClient();

@@ -11,7 +11,7 @@ module Api
 
       def show
         authorize @project
-        render json: { project: ProjectSerializer.call(@project, include_script: true, include_scenes: true) }
+        render json: { project: ProjectSerializer.call(@project, include_script: true, include_scenes: true, include_cost: true) }
       end
 
       def create

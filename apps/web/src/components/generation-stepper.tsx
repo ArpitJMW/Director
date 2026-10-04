@@ -8,6 +8,7 @@ const STAGES: { key: GenerationStage; label: string; checkpointAfter?: boolean }
   { key: "storyboard", label: "Storyboard" },
   { key: "assets", label: "Visuals", checkpointAfter: true },
   { key: "voice", label: "Voice & captions" },
+  { key: "quality_check", label: "QA" },
   { key: "preflight", label: "Preflight" },
   { key: "render", label: "Render", checkpointAfter: true },
 ];
@@ -95,6 +96,16 @@ export function GenerationStepper({
             {s.checkpointAfter && project.pipeline.checkpoint === (i < 3 ? "storyboard" : "review") && (
               <span className="ml-auto rounded-full bg-warning/20 px-2 py-0.5 text-[10px] font-medium text-warning-foreground">
                 review
+              </span>
+            )}
+            {/* Phase 1 Task 3: a direction-only edit (camera/transition/
+                overlay/text_style) never touches the Render step's own
+                done/pending state — the existing render is still valid,
+                it just no longer reflects every scene, so flag it here
+                instead of silently leaving the video looking current. */}
+            {s.key === "render" && s.state === "done" && project.pending_render_changes && (
+              <span className="ml-auto rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">
+                changes pending
               </span>
             )}
           </li>

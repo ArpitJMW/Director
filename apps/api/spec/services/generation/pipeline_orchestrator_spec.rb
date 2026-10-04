@@ -41,6 +41,34 @@ RSpec.describe Generation::PipelineOrchestrator do
       expect(project.pipeline_checkpoint).to be_nil
     end
 
+    it "stop() cancels active jobs and parks the project" do
+      described_class.start(project)
+      described_class.continue(project.reload) # -> render, review checkpoint
+
+      described_class.stop(project.reload)
+      project.reload
+
+      expect(project).to be_cancelled
+      expect(project.pipeline_mode).to eq("manual")
+      expect(project.pipeline_checkpoint).to be_nil
+    end
+
+    it "restart() discards everything and re-runs from the top" do
+      described_class.start(project)
+      described_class.continue(project.reload)
+      old_scene_ids = project.reload.scenes.pluck(:id)
+      old_script_ids = project.scripts.pluck(:id)
+
+      described_class.restart(project.reload)
+      project.reload
+
+      expect(project.pipeline_mode).to eq("auto")
+      expect(project.scenes.pluck(:id) & old_scene_ids).to be_empty
+      expect(project.scripts.pluck(:id) & old_script_ids).to be_empty
+      expect(project.video_renders).to be_empty
+      expect(project.scenes.count).to be >= 2 # fresh run produced a new storyboard
+    end
+
     it "revise() sends a project back to the storyboard checkpoint" do
       described_class.start(project)
       described_class.continue(project.reload)

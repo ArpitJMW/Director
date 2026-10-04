@@ -14,6 +14,7 @@ module Generation
 
       manifest = Media::RenderManifestBuilder.new(project: project, video_render: video_render).call
       video_render.update!(manifest: manifest)
+      warn_about_silent_scenes(project, video_render, gen_job, manifest)
       video_render.start!
 
       result = Video::RenderVideo.new(manifest: manifest).call
@@ -55,6 +56,24 @@ module Generation
 
     def total_duration(manifest)
       manifest[:scenes].sum { |s| s[:duration].to_f }.round(2)
+    end
+
+    # Phase 1 Task 2.4 render safety: a narrated scene can still reach render
+    # time with no audio (e.g. voice quota ran out and a retry hasn't happened
+    # yet) — that must never render silently with no trace. Never blocks the
+    # render; just makes the gap visible in two existing places rather than
+    # only inside the scene data no one is looking at.
+    def warn_about_silent_scenes(project, video_render, gen_job, manifest)
+      silent = manifest[:scenes].select { |s| s[:narration].present? && s[:narration_audio_url].nil? }
+      return if silent.empty?
+
+      message = "#{silent.size} scene(s) have narration but no audio and will render silent: " \
+                "#{silent.map { |s| s[:id] }.join(', ')}"
+      video_render.update!(log: message)
+      GenerationLog.create!(
+        project: project, generation_job: gen_job, level: "warn",
+        stage: "render", message: message
+      )
     end
   end
 end

@@ -104,7 +104,7 @@ class Project < ApplicationRecord
     end
 
     event :cancel do
-      transitions from: [ :draft, *WORKING_STATES, :failed ], to: :cancelled
+      transitions from: [ :draft, *WORKING_STATES, :failed, :completed ], to: :cancelled
       after { update_column(:cancelled_at, Time.current) }
     end
 
@@ -123,7 +123,7 @@ class Project < ApplicationRecord
     end
 
     event :reset_to_draft do
-      transitions from: [ :failed, :cancelled ], to: :draft
+      transitions from: [ :failed, :cancelled, :completed ], to: :draft
     end
   end
 

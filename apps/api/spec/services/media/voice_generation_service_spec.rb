@@ -36,4 +36,34 @@ RSpec.describe Media::VoiceGenerationService do
     scene.update!(narration: "")
     expect(described_class.new(scene: scene).call).to be_nil
   end
+
+  describe "duration reconciliation (Task 2.6)" do
+    it "reconciles the scene's duration to the measured audio length plus tail padding" do
+      vg = described_class.new(scene: scene).call
+
+      expected = [ vg.duration_seconds.to_f + Media::SceneDurationService::TAIL_PADDING,
+                   Media::SceneDurationService::MIN_DURATION ].max
+      expect(scene.reload.duration_seconds.to_f).to be_within(0.01).of(expected)
+    end
+
+    it "rescales the scene's shots proportionally when it has any" do
+      # A single shot spanning the whole (old) scene duration must still span
+      # the whole (new) scene duration after reconciliation.
+      shot = create(:shot, scene: scene, duration_seconds: scene.duration_seconds)
+
+      vg = described_class.new(scene: scene).call
+
+      expect(shot.reload.duration_seconds.to_f).to be_within(0.01).of(scene.reload.duration_seconds.to_f)
+      expect(vg).to be_present
+    end
+
+    it "leaves a non-narrated scene's duration untouched" do
+      original_duration = scene.duration_seconds
+      scene.update!(narration: "")
+
+      described_class.new(scene: scene).call
+
+      expect(scene.reload.duration_seconds).to eq(original_duration)
+    end
+  end
 end
