@@ -35,3 +35,6 @@ apps/api/.bundle/
 /out/
 *.mp4
 !docs/**/*.mp4
+
+# Scratch output at the repo root
+tmp/
