@@ -19,6 +19,7 @@ class ProjectSerializer < ApplicationSerializer
       disclosure: record.disclosure,
       template_id: record.template&.public_id,
       scene_count: record.scenes.size,
+      pending_render_changes: pending_render_changes?,
       pipeline: {
         mode: record.pipeline_mode,
         checkpoint: record.pipeline_checkpoint,
@@ -30,6 +31,38 @@ class ProjectSerializer < ApplicationSerializer
     }.tap do |hash|
       hash[:current_script] = ScriptSerializer.call(record.current_script) if opts[:include_script]
       hash[:scenes] = SceneSerializer.list(record.scenes) if opts[:include_scenes]
+      hash[:qa] = qa_summary if opts[:include_scenes]
+      hash[:cost] = { estimate: Providers::CostReport.estimate(record), actual: Providers::CostReport.actual(record) } if opts[:include_cost]
     end
+  end
+
+  private
+
+  # Task 6 Part E: project-level QA roll-up, read from each unit's metadata.
+  def qa_summary
+    units = record.scenes.includes(:shots).flat_map { |s| [ s, *s.shots.to_a ] }
+    states = units.filter_map { |u| u.metadata&.dig("qa") }
+    return { checked: false, setting: record.settings.to_h["setting"].present? } if states.empty?
+
+    {
+      checked: true,
+      setting: record.settings.to_h["setting"].present?,
+      units: states.size,
+      passed: states.count { |q| q["status"] == "passed" },
+      failed: states.count { |q| q["status"] == "failed" },
+      unavailable: states.count { |q| q["status"] == "unavailable" },
+      repaired: units.count { |u| u.metadata&.dig("qa", "repair", "outcome") == "repaired" },
+      issues: states.sum { |q| q["issues"].to_a.size }
+    }
+  end
+
+  # Phase 1 Task 3: single aggregate query (rather than each scene running
+  # its own Scene#needs_rerender? against the project) — true when ANY scene
+  # was touched by a direction-only edit since the last completed render.
+  def pending_render_changes?
+    last_rendered_at = record.video_renders.where(status: "completed").maximum(:finished_at)
+    return false if last_rendered_at.nil?
+
+    record.scenes.where("scenes.updated_at > ?", last_rendered_at).exists?
   end
 end

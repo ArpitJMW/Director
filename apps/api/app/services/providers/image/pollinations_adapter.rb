@@ -22,11 +22,15 @@ module Providers
         width, height = dimensions_for(aspect_ratio)
         used_model = model || @model
 
-        # Pollinations has no separate negative field — fold it into the prompt.
+        # Pollinations has no negative-prompt field and its FLUX/SANA backends
+        # don't parse an "avoid:" clause — appending it only pollutes the
+        # positive prompt, so we drop it here. (negative_prompt stays in the
+        # method signature for providers that do support it.)
         full_prompt = prompt.to_s
-        full_prompt += " | avoid: #{negative_prompt}" if negative_prompt.present?
 
-        params = { width: width, height: height, model: used_model, nologo: "true", safe: "true", enhance: "true" }
+        # NB: enhance=true makes Pollinations LLM-rewrite the prompt, which is
+        # non-deterministic and defeats the fixed seed — leave it off.
+        params = { width: width, height: height, model: used_model, nologo: "true", safe: "true" }
         params[:seed] = seed if seed
         params[:token] = @token if @token
         uri = URI("#{HOST}/#{ERB::Util.url_encode(full_prompt)}?#{URI.encode_www_form(params)}")

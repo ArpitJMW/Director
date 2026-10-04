@@ -31,6 +31,27 @@ module Api
         render json: { project: ProjectSerializer.call(project.reload) }, status: :accepted
       end
 
+      # POST /api/v1/projects/:id/pipeline/stop  (halt an in-flight run)
+      def pipeline_stop
+        project = project_scope
+        authorize project, :generate?
+
+        Generation::PipelineOrchestrator.stop(project)
+        render json: { project: ProjectSerializer.call(project.reload) }, status: :accepted
+      end
+
+      # POST /api/v1/projects/:id/pipeline/restart  (discard everything, re-run)
+      def pipeline_restart
+        project = project_scope
+        authorize project, :generate?
+
+        gen_job = Generation::PipelineOrchestrator.restart(project)
+        render json: {
+          job: gen_job && GenerationJobSerializer.call(gen_job),
+          project: ProjectSerializer.call(project.reload)
+        }, status: :accepted
+      end
+
       # POST /api/v1/projects/:id/pipeline/revise  (go back to storyboard editing)
       def pipeline_revise
         project = project_scope

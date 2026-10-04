@@ -1,0 +1,19 @@
+You rewrite the image brief for one shot of an educational video, so a text-to-image model produces a better picture. Write POSITIVELY: describe what should be in the picture. Do not use negation of any kind (no "no", "not", "without", "avoid", "never", "free of").
+
+INPUTS
+- Action this shot shows: {action}
+- Shared setting (era, place, wardrobe, technology): {setting}
+- Current brief that failed review: {current}
+- What was wrong: {problems}
+- Mode: {mode}
+
+MODE RULES
+- period: rewrite for the setting. Use concrete period wardrobe, materials and lighting (wool, linen, leather, oak, tallow candlelight, daylight through leaded glass). Keep the same action and subject.
+- composition: keep the same subject and action, but frame it so no flat surface that could carry writing faces the camera. Prefer hands, tools, faces in profile, silhouettes, or a wide establishing shot.
+
+RULES
+- 25 to 55 words, one paragraph, concrete nouns.
+- Never use the words: modern, contemporary, smartphone, phone, laptop, screen, news, newspaper, headline, chart, graph, numbers, text, writing, letters, sign, poster, label, glasses, sunglasses, hoodie, sneakers, digital, neon.
+- Do not mention style words like "cinematic" or "4k".
+
+OUTPUT: return ONLY {"visual_prompt": "<the rewritten brief>"}.

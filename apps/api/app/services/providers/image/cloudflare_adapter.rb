@@ -28,10 +28,19 @@ module Providers
         used_model = model || @model
         uri = URI("https://api.cloudflare.com/client/v4/accounts/#{@account_id}/ai/run/#{used_model}")
 
-        payload = { prompt: prompt, steps: 4 }
-        # SDXL-family models accept these; FLUX schnell ignores them.
-        payload[:negative_prompt] = negative_prompt if negative_prompt.present?
-        payload[:seed] = seed if seed
+        # FLUX schnell on Workers AI only accepts prompt / steps — it rejects
+        # width/height/negative_prompt/seed with HTTP 400. It returns 1024×1024
+        # and the renderer crops to the target aspect ratio. SDXL-family models
+        # do take the extra knobs.
+        flux = used_model.include?("flux")
+        payload = { prompt: prompt, steps: flux ? 8 : 20 }
+        unless flux
+          payload[:negative_prompt] = negative_prompt if negative_prompt.present?
+          payload[:seed] = seed if seed
+          width, height = dimensions_for(aspect_ratio)
+          payload[:width] = width
+          payload[:height] = height
+        end
         res = post(uri, payload)
         bytes, content_type = extract_image(res)
 

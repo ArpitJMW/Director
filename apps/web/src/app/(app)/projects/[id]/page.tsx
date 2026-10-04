@@ -1,16 +1,20 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@clipify/ui";
-import { useProject, useProjectScenes, useUpdateProject } from "@/lib/api/projects";
+import { projectKeys, useProject, useProjectScenes, useUpdateProject } from "@/lib/api/projects";
 import {
   useContinuePipeline,
   useProjectJobs,
   useRegenerateAllImages,
   useRenderVideo,
+  useRestartPipeline,
   useRevisePipeline,
   useStartPipeline,
+  useStopPipeline,
 } from "@/lib/api/pipeline";
 import { VISUAL_STYLES } from "@/lib/constants";
 import { useProjectRenders } from "@/lib/api/renders";
@@ -39,7 +43,22 @@ export default function ProjectPage() {
   });
   const { data: scenes = [] } = useProjectScenes(id, { poll: anyJobActive });
 
+  // Task 6.1: the project query only polls while a job is active, so a page
+  // that saw the last job still "active" never fetched the checkpoint it
+  // reached afterwards. Refresh once when the last job finishes.
+  const queryClient = useQueryClient();
+  const wasActive = useRef(anyJobActive);
+  useEffect(() => {
+    if (wasActive.current && !anyJobActive) {
+      queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: projectKeys.scenes(id) });
+    }
+    wasActive.current = anyJobActive;
+  }, [anyJobActive, id, queryClient]);
+
   const start = useStartPipeline(id);
+  const stop = useStopPipeline(id);
+  const restart = useRestartPipeline(id);
   const cont = useContinuePipeline(id);
   const revise = useRevisePipeline(id);
   const render = useRenderVideo(id);
@@ -71,7 +90,42 @@ export default function ProjectPage() {
             <p className="mt-1 max-w-2xl text-sm text-muted line-clamp-2">{project.topic}</p>
           )}
         </div>
-        <ProjectStatusBadge status={project.status} />
+        <div className="flex flex-col items-end gap-2">
+          <ProjectStatusBadge status={project.status} checkpoint={checkpoint} />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {running && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={stop.isPending}
+                onClick={() => stop.mutate()}
+              >
+                {stop.isPending ? "Stopping…" : "Stop"}
+              </Button>
+            )}
+            {started && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={restart.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Start over? This deletes the current script, storyboard, and video, then regenerates everything from your project settings.",
+                    )
+                  ) {
+                    restart.mutate();
+                  }
+                }}
+              >
+                {restart.isPending ? "Restarting…" : "Start over"}
+              </Button>
+            )}
+            <Link href="/projects/new">
+              <Button size="sm">New video</Button>
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* --- Not started: one button --- */}

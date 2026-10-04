@@ -17,4 +17,17 @@ RSpec.describe Generation::SceneAssetJob do
     expect(Asset.exists?(first.id)).to be(false)
     expect(Storage.service.exists?(key: first.storage_key)).to be(false)
   end
+
+  it "regenerates a text-strategy scene's spec (no asset involved) via the same job" do
+    text_scene = project.scenes.find { |s| s.asset_strategy == "text" }
+    gen_job = create(:generation_job, project: project, stage: "assets", queue: "media", scene: text_scene)
+    gen_job.enqueue!
+
+    described_class.new.perform(gen_job.id)
+
+    text_scene.reload
+    expect(text_scene.metadata["production_method"]).to eq("text")
+    expect(text_scene.selected_asset).to be_nil
+    expect(gen_job.reload.result["produced"]).to eq(1)
+  end
 end

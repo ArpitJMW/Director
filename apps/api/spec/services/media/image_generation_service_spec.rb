@@ -25,10 +25,22 @@ RSpec.describe Media::ImageGenerationService do
     expect(gen.status).to eq("succeeded")
   end
 
-  it "skips scenes whose visual_type is not an image type" do
-    text_scene = project.scenes.find { |s| s.visual_type == "text_animation" }
+  it "skips scenes whose asset_strategy is not image" do
+    text_scene = project.scenes.find { |s| s.asset_strategy == "text" }
     expect(described_class.new(scene: text_scene).call).to be_nil
     expect(text_scene.reload.status).to eq("pending")
+  end
+
+  it "generates for a scene labeled a non-image visual_type as long as asset_strategy is image " \
+     "(Task 2.3 — the 'chart' silent-skip bug: asset_strategy gates generation, not visual_type)" do
+    chart_as_image = create(:scene, project: project, visual_type: "chart", asset_strategy: "image",
+      visual_prompt: "a bar chart comparing compounding frequencies")
+
+    asset = described_class.new(scene: chart_as_image).call
+
+    expect(asset).to be_present
+    expect(chart_as_image.reload.selected_asset).to eq(asset)
+    expect(chart_as_image.status).to eq("ready")
   end
 
   it "marks the scene failed and re-raises on provider error" do

@@ -46,6 +46,8 @@ module Media
         provider_request_id: result.provider_request_id, ai_generation_id: generation.id
       )
 
+      SceneDurationService.reconcile!(scene: @scene, measured_duration: result.duration_seconds)
+
       # Supersede any earlier narration for this scene (latest wins).
       VoiceGeneration.where(scene_id: @scene.id).where.not(id: voice_generation.id).find_each do |old|
         old.audio_asset&.destroy
